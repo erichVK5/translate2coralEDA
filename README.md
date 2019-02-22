@@ -17,4 +17,6 @@ A utility allowing conversion from
 
 to xschem, pcb-rnd, gschem, and gEDA PCB formats
 
+see also http://repo.hu/projects/coraleda/
+
 Licence GPL 2.0
