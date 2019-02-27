@@ -22,13 +22,16 @@ see also http://repo.hu/projects/coraleda/
 
 usage:
 
-git clone https://github.com/erichVK5/translate2coralEDA
-cd translate2coralEDA
-javac *.java
-java translate2coralEDA myfile.lib
+	git clone https://github.com/erichVK5/translate2coralEDA
+	cd translate2coralEDA
+	javac *.java
+	java translate2coralEDA myfile.lib
 
 TODO:
 
+code the unique uid for exported .lht footprints
+refactor the parser code to simplify and unify footprint export
+implement arbitrary polygonal pad shapes in .lht exports 
 refine xschem symbol outputs
 
 Licence GPL 2.0
