@@ -19,4 +19,16 @@ to xschem, pcb-rnd, gschem, and gEDA PCB formats
 
 see also http://repo.hu/projects/coraleda/
 
+
+usage:
+
+git clone https://github.com/erichVK5/translate2coralEDA
+cd translate2coralEDA
+javac *.java
+java translate2coralEDA myfile.lib
+
+TODO:
+
+refine xschem symbol outputs
+
 Licence GPL 2.0
