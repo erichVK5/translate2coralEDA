@@ -3,8 +3,7 @@ A utility to convert symbols and footprints to xschem, pcb-rnd, gEDA PCB, and gs
 
 The utility currently exports by default to xschem and pcb-rnd formats. translate2geda is effectively a deprecated utility as gEDA PCB is unable to support more complex features in footprints and layouts.
 
-pcb-rnd's data model accomodates octagonal, roundrect, obround, square and circular pads, and padstacks, arbitrary rotation of padstacks, as well as allowing text, polygons and copper and padstacks within subcircuits (a more generalised form of a footprint). Accordingly, attempting to convert more sophisticated features like this into gEDA PCB format will lead to data loss. pcb-rnd can load gEDA PCB format layouts, Eagle binary and Eagle XML layouts, as well as Protel Autotrax, HPGL and various other formats. Users are encouraged to upgrade their toolchain to pcb-rnd with its richer data model and feature set.
-  
+pcb-rnd's data model accomodates octagonal, roundrect, obround, square and circular pads, and padstacks, arbitrary rotation of padstacks, as well as allowing text, polygons and copper and padstacks within subcircuits (a more generalised form of a footprint). Accordingly, attempting to convert more sophisticated features like this into gEDA PCB format will lead to data loss. pcb-rnd can load gEDA PCB format layouts, Kicad layout and modules, Eagle binary and Eagle XML layouts and libraries, as well as Protel Autotrax, HPGL and various other formats. Users are encouraged to upgrade their toolchain to pcb-rnd with its richer data model and feature set.
 
 A utility allowing conversion from
 
@@ -37,6 +36,7 @@ TODO:
 - continued refactoring of the parser code to simplify and unify footprint export
 - implement arbitrary polygonal pad shapes in .lht exports 
 - refine xschem symbol outputs
+- refactor and improve gerber conversion
 - add SVG font conversion support
 - add SVG path conversion support
 - port QUCS and LT-Spice symbols to xschem
