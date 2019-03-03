@@ -126,8 +126,7 @@ public class FootprintText extends FootprintElementArchetype {
     //    hershey.renderString("abcdeffgghhiijklmmnnopqqrrstuvwxyzz112234567890", 30000, 40000, Math.PI/2, 1.0);
   }
 
-
-  public void populateElement(String arg, boolean metric)
+  public void populateKicadElement(String arg, boolean metric)
   {
     kicadTextDescriptor = arg;
     String[] tokens = kicadTextDescriptor.split(" ");
@@ -162,7 +161,7 @@ public class FootprintText extends FootprintElementArchetype {
         displayedTextField = rawString.substring(rawString.indexOf('"') + 1, rawString.lastIndexOf('"'));
         
       }
-    else if (tokens[0].startsWith("fbtext"))
+    else if (tokens[0].startsWith("fp_text"))
       { // s-files seem to have limited support for multiple text fields
         for (int counter = 1; counter < tokens.length; counter++)
           {
@@ -230,7 +229,5 @@ public class FootprintText extends FootprintElementArchetype {
   public boolean isBottom() {
     return textLayer == kicadBottomSilkLayer;
   }
-
-
  
 }

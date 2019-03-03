@@ -296,7 +296,7 @@ public class DrawnElement extends FootprintElementArchetype
 
   // here, we populate the line object with a string
   // extracted from a Kicad module    
-  public void populateElement(String arg, boolean metric)
+  public void populateKicadElement(String arg, boolean metric)
   {
     kicadDrawnSegmentDescriptor = arg;
 

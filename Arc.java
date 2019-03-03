@@ -253,7 +253,7 @@ public class Arc extends FootprintElementArchetype
 
   // here, we populate the line object with a string
   // extracted from a Kicad module    
-  public void populateElement(String arg, boolean metric)
+  public void populateKicadElement(String arg, boolean metric)
   {
 
     kicadArcDescriptor = arg;
@@ -499,6 +499,5 @@ public class Arc extends FootprintElementArchetype
   public boolean isTop() {
     return true; // TODO: needs to reflect actual layer for object
   }
-
 
 }

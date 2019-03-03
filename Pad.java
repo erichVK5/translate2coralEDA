@@ -123,7 +123,7 @@ public class Pad extends FootprintElementArchetype
 
   }
 
-  public void populateElement(String arg, boolean metric, long minimumViaAndDrillSizeNM)
+  public void populateKicadElement(String arg, boolean metric, long minimumViaAndDrillSizeNM)
   {
     gEDAdefaultMinimumDrillSizeNm = minimumViaAndDrillSizeNM;
     String parseString = "";
@@ -278,6 +278,10 @@ public class Pad extends FootprintElementArchetype
               {
                 kicadDrillShape = 'R';
               }
+            else if (tokens[3].startsWith("roundrect"))
+              {
+                kicadDrillShape = 'r'; // kludge for now, ignored by gEDA exporter
+              }
             else if (tokens[3].startsWith("oval"))
               {
                 kicadDrillShape = 'O';
@@ -414,6 +418,14 @@ public class Pad extends FootprintElementArchetype
       } else if (token.startsWith("name=")) {
         kicadShapeNetName = token.substring(5).replaceAll("[\"]","");
         kicadShapePadName = kicadShapeNetName;
+      } else if (token.startsWith("shape=")) {
+        String temp = token.substring(6).replaceAll("[\"]","");
+        System.out.println("Shape found is " + temp); 
+        if (temp.startsWith("octag"))
+            {
+              System.out.println("Shape type is 'o'"); 
+              kicadDrillShape = 'o'; //kludge for now for octagon
+            }
       } else if (token.startsWith("x=")) {
         token = token.substring(2);
         kicadPadPositionXNm
@@ -554,6 +566,12 @@ public class Pad extends FootprintElementArchetype
       }
 
 
+    if (kicadDrillShape == 'r') {
+      kicadDrillShape = 'R'; // ignore roundrect for gEDA export
+    }
+    if (kicadDrillShape == 'o') {
+      kicadDrillShape = 'O'; // ignore octagon for gEDA export for now
+    }
     switch (kicadDrillShape)
       {
         case 'O': // an obround pad shape can be done as a circle for now

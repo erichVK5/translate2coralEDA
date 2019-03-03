@@ -215,7 +215,7 @@ public class translate2coralEDA {
   // schematic symbol data
   private static String [] parseEagleLBR(String EagleFilename) throws IOException {
 
-    EagleParser Eaglep = new EagleParser(EagleFilename, "xschem", verbose);
+    EagleParser Eaglep = new EagleParser(EagleFilename, "pcb-rnd", verbose);
     return Eaglep.convert(EagleFilename);
 
   } 

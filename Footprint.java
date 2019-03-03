@@ -34,22 +34,22 @@
  *
  */
 
+import java.io.*;
 import java.util.Scanner;
 import java.util.ArrayList;
 
 public class Footprint
 {
-  String footprintName = "newFootprint";
-  int padStackProtoCount = 0;
-  String passedString = "";
-  FootprintHeader[] moduleTextDescriptors = new FootprintHeader[200];
-
-  ArrayList<Pad> pads = new ArrayList<Pad>();
   static ArrayList<String> padStackHashes = new ArrayList<String>();
   static ArrayList<String> padStackDefs = new ArrayList<String>();
 
-  FootprintElementArchetype footprintElements[] =  new FootprintElementArchetype[2000];
-  int FPFeatureCount = 0;
+  String footprintName = "newFootprint";
+  int padStackProtoCount = 0;
+  String passedString = "";
+
+  ArrayList<FootprintElementArchetype> moduleTextDescriptors = new ArrayList<FootprintElementArchetype>();
+  ArrayList<FootprintElementArchetype> footprintElements = new ArrayList<FootprintElementArchetype>();
+  ArrayList<Pad> pads = new ArrayList<Pad>();
 
   Boolean metricSystem = false;   // this will be changed to "true", if needed,
   // with parsing in due course
@@ -60,12 +60,6 @@ public class Footprint
   String padDefinitionLines;
 
   int lineCount = 0;
-
-  int padCount = 0;
-  int drawSegmentCount = 0;
-  int drawArcCount = 0;
-  int drawCircleCount = 0;
-  int textDescriptorCount = 0;
 
   String licenceText1 = null;
 
@@ -81,6 +75,43 @@ public class Footprint
 
   String reconstructedKicadModuleAsString = ""; // we'll return this from the toString() method
 
+  private void setFootprintName(String name) {
+    footprintName = name;
+    if (footprintName.length() > 2) {
+      if (footprintName.charAt(0) == '"') {
+        footprintName = footprintName.substring(1);
+      }
+      if (footprintName.charAt(footprintName.length()-1) == '"') {
+        footprintName = footprintName.substring(0,footprintName.length()-1);
+      }
+    }
+    // now we get rid of characters ![a-zA-Z0-9.-] which
+    // may be unacceptable for a filename
+    footprintName = footprintName.replaceAll("[^a-zA-Z0-9.-]", "_");
+  }
+  
+  public Footprint(String footprintName)
+  {
+    setFootprintName(footprintName);
+  }
+
+  public void add(Arc a) {
+    footprintElements.add(a);
+  }
+  
+  public void add(Circle c) {
+    footprintElements.add(c);
+  }
+
+  public void add(DrawnElement de) {
+    footprintElements.add(de);
+  }
+ 
+  public void add(Pad p) {
+    footprintElements.add(p);
+    pads.add(p);
+  }
+  
   public Footprint(String args, Boolean MmMetricUnits, long minimumViaAndDrillSizeNM)
   {
 
@@ -115,19 +146,7 @@ public class Footprint
         else if (tokens[0].startsWith("$MODULE") || tokens[0].startsWith("module"))
           {       // it all starts here, with the module header
             // first we look for double quotes inserted by the likes of madparts
-            footprintName = tokens[1];
-            if (footprintName.length() > 2) {
-              if (footprintName.charAt(0) == '"') {
-                footprintName = footprintName.substring(1);
-              }
-              if (footprintName.charAt(footprintName.length()-1) == '"') {
-                footprintName = footprintName.substring(0,footprintName.length()-1);
-              }
-            }
-            // now we get rid of characters ![a-zA-Z0-9.-] which
-            // may be unacceptable for a filename
-            footprintName = footprintName.replaceAll("[^a-zA-Z0-9.-]", "_");
-            // System.out.println(footprintName + " is the footprint name found.");
+            setFootprintName(tokens[1]);
 
             // we now step through the module line by line
             while (moduleDefinition.hasNext() && !moduleFinished)
@@ -140,97 +159,55 @@ public class Footprint
                 // we tokenize the line
                 tokens = trimmedString.split(" ");
 					
-
                 // and we then decide what to do with the tokenized lines
                 // we ignore "attr" lines at this stage
                 if (tokens[0].startsWith("Po") || tokens[0].startsWith("at "))
                   {
-                    // we find the xOffset in the position, and remember
-                    // it is passed in Nm units
-                    parsedValue = Float.parseFloat(tokens[1]);
-                    xOffset = convertToNanometres(parsedValue, metricSystem);
-                    parsedValue = Float.parseFloat(tokens[2]);
-                    yOffset = convertToNanometres(parsedValue, metricSystem);
+                    // we find the x/y Offset in the position field in Nm units
+                    xOffset = convertToNanometres(Float.parseFloat(tokens[1]), metricSystem);
+                    yOffset = convertToNanometres(Float.parseFloat(tokens[2]), metricSystem);
                   }
-                else if (tokens[0].startsWith("T0"))
+                else if (tokens[0].startsWith("T0") || (tokens[0].startsWith("fp_text") && tokens[1].startsWith("reference")))
                   {
-                    moduleTextDescriptors[textDescriptorCount] = new FootprintHeader();
-                    moduleTextDescriptors[textDescriptorCount].populateHeader(trimmedString, metricSystem);
-                    textDescriptorCount++;
+                    FootprintHeader fph = new FootprintHeader();
+                    fph.populateKicadElement(trimmedString, metricSystem);
+                    moduleTextDescriptors.add(fph);
                   }
-                else if (tokens[0].startsWith("T") && !tokens[0].startsWith("T1"))
+                else if (tokens[0].startsWith("T") || tokens[0].startsWith("fp_text"))
                   {
-                    // we exclude the component value T1, and look for other text to render
-                    footprintElements[FPFeatureCount] = new FootprintText();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
+                    FootprintText fpt = new FootprintText();
+                    fpt.populateKicadElement(trimmedString, metricSystem);
+                    moduleTextDescriptors.add(fpt);
                   }
-                else if (tokens[0].startsWith("fp_text") && tokens[1].startsWith("reference"))
+                else if (tokens[0].startsWith("DS") || tokens[0].startsWith("fp_line"))
                   {
-                    moduleTextDescriptors[textDescriptorCount] = new FootprintHeader();
-                    moduleTextDescriptors[textDescriptorCount].populateHeader(trimmedString, metricSystem);
-                    textDescriptorCount++;
-                    // we only want to know what the reference text is
+                    DrawnElement de = new DrawnElement();
+                    de.populateKicadElement(trimmedString, metricSystem);
+                    footprintElements.add(de);
                   }
-
-                else if (tokens[0].startsWith("DS"))
+                else if (tokens[0].startsWith("DC") || tokens[0].startsWith("fp_circle"))
                   {
-                    footprintElements[FPFeatureCount] = new DrawnElement();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawSegmentCount++;
+                    Circle c = new Circle();
+                    c.populateKicadElement(trimmedString, metricSystem);
+                    footprintElements.add(c);
                   }
-                else if (tokens[0].startsWith("fp_line"))
+                else if (tokens[0].startsWith("DA") || tokens[0].startsWith("fp_arc"))
                   {
-                    footprintElements[FPFeatureCount] = new DrawnElement();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawSegmentCount++;
-                  }
-                else if (tokens[0].startsWith("DC"))
-                  {
-                    footprintElements[FPFeatureCount] = new Circle();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawCircleCount++;
-
-                  }
-                else if (tokens[0].startsWith("fp_circle"))
-                  {
-                    footprintElements[FPFeatureCount] = new Circle();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawCircleCount++;
-                  }
-                else if (tokens[0].startsWith("DA"))
-                  {
-                    footprintElements[FPFeatureCount] = new Arc();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawArcCount++;
-                  }
-                else if (tokens[0].startsWith("fp_arc"))
-                  {
-                    footprintElements[FPFeatureCount] = new Arc();
-                    footprintElements[FPFeatureCount].populateElement(trimmedString, metricSystem);
-                    FPFeatureCount++;
-                    drawArcCount++;
+                    Arc a = new Arc();
+                    a.populateKicadElement(trimmedString, metricSystem);
+                    footprintElements.add(a);
                   }
                 else if (tokens[0].startsWith("pad"))
                   {  // we have identified a pad definition in the module
-                    padDefinitionLines = trimmedString;
-                    padCount++;
-
-                    footprintElements[FPFeatureCount] = new Pad();
-                    footprintElements[FPFeatureCount].populateElement(padDefinitionLines, metricSystem, minimumViaAndDrillSizeNM);
-		    pads.add((Pad) footprintElements[FPFeatureCount]);
-                    FPFeatureCount++;	
+                    Pad p = new Pad();
+                    p.populateKicadElement(trimmedString, metricSystem, minimumViaAndDrillSizeNM);
+                    this.add(p);
+		    //pads.add(p);
                   }
                 else if (tokens[0].startsWith("$PAD"))
                   {  // we have identified a $PAD definition in the module
                     padDefinitionLines = "";
                     padDefinitionLineCount = 0;
-                    padCount++;
                     while (!trimmedString.startsWith("$EndPAD") && moduleDefinition.hasNext())
                       { 	// we now turn the multiline $PAD definition 
                         // into a single string
@@ -244,19 +221,16 @@ public class Footprint
                     // having created a single string containing the
                     // $PAD definition
                     // we can now pass it to a Pad constructor
-                    footprintElements[FPFeatureCount] = new Pad();
-                    footprintElements[FPFeatureCount].populateElement(padDefinitionLines, metricSystem, minimumViaAndDrillSizeNM);
-		    pads.add((Pad) footprintElements[FPFeatureCount]);
-                    FPFeatureCount++;
+                    Pad p = new Pad();
+                    p.populateKicadElement(padDefinitionLines, metricSystem, minimumViaAndDrillSizeNM);
+		    this.add(p);
                   }
 
                 if (tokens[0].startsWith("$EndMOD"))
                   {
                     moduleFinished = true;
                   }
-
               }
-
           }
         else {
           // not much to see, not $INDEX or $MODULE
@@ -278,7 +252,101 @@ public class Footprint
     return footprintName + ".lht";
   }
 
+  private String octagonShape(long x, long y, boolean top, boolean intern, boolean copper, boolean mask) {
+    String maskComb = "";
+    String layermask = "";
+    long minDim = x;
+    if (y < x) {
+      minDim = y;
+    }
+    long edgeLength = (long)(minDim/(1+Math.sqrt(2)));
+    String shape =
+	"      ha:ps_shape_v4 {\n       clearance = 0.0\n       li:ps_poly {\n";
+    shape = shape +
+            "        -" + x/2 + "nm\n        -" + edgeLength/2 +
+        "nm\n        -" + x/2 + "nm\n         " + edgeLength/2 +
+        "nm\n        -" + edgeLength/2 + "nm\n         " + y/2 +
+        "nm\n         " + edgeLength/2 + "nm\n         " + y/2 +
+        "nm\n         " + x/2 + "nm\n         " + edgeLength/2 +
+        "nm\n         " + x/2 + "nm\n        -" + edgeLength/2 +
+        "nm\n         " + edgeLength/2 + "nm\n        -" + y/2 +
+        "nm\n        -" + edgeLength/2 + "nm\n        -" + y/2 +
+        "nm\n" +
+        "       }\n";
+    if (top && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        top = 1\n       }\n";
+    } else if (!top && intern && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        intern = 1\n       }\n";
+    } else if (!top && !intern && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        bottom = 1\n       }\n";
+    } else if (top && mask) {
+      layermask = "       ha:layer_mask {\n        mask = 1\n        top = 1\n       }\n";
+      maskComb = "        sub = 1\n        auto = 1\n";
+    } else if (!top && mask) {
+      layermask = "       ha:layer_mask {\n        mask = 1\n        bottom = 1\n       }\n";
+      maskComb = "        sub = 1\n        auto = 1\n";
+    }
+    String combining = "       ha:combining {\n" + maskComb + "       }\n      }\n";
+    return shape + layermask + combining;
+  }
+
   private String roundRectShape(long x, long y, boolean top, boolean intern, boolean copper, boolean mask) {
+    String maskComb = "";
+    String layermask = "";
+    long minDim = x;
+    if (y < x) {
+      minDim = y;
+    }
+    long minDimQ = minDim/4;
+    if (minDimQ > 250000) {
+      minDimQ = 250000; // cap at 0.25mm radius maximum for corners
+    }
+    double cos45 = Math.cos(Math.PI/4);
+    double cos225 = Math.cos(Math.PI/8);
+    double sin225 = Math.sin(Math.PI/8);    
+    String shape =
+	"      ha:ps_shape_v4 {\n       clearance = 0.0\n       li:ps_poly {\n";
+    shape = shape +
+            "        -" + x/2 + "nm\n        -" + (y/2 - minDimQ) +
+        "nm\n        -" + x/2 + "nm\n         " + (y/2 - minDimQ) +
+        "nm\n        -" + (x/2 - minDimQ*(1-cos225)) + "nm\n         " + (y/2 - minDimQ*(1-sin225)) +
+        "nm\n        -" + (x/2 - minDimQ*(1-cos45)) + "nm\n         " + (y/2 - minDimQ*(1-cos45)) +
+        "nm\n        -" + (x/2 - minDimQ*(1-sin225)) + "nm\n         " + (y/2 - minDimQ*(1-cos225)) +
+        "nm\n        -" + (x/2 - minDimQ) + "nm\n         " + y/2 +
+        "nm\n         " + (x/2 - minDimQ) + "nm\n         " + y/2 +
+        "nm\n         " + (x/2 - minDimQ*(1-sin225)) + "nm\n         " + (y/2 - minDimQ*(1-cos225)) +
+        "nm\n         " + (x/2 - minDimQ*(1-cos45)) + "nm\n         " + (y/2 - minDimQ*(1-cos45)) +
+        "nm\n         " + (x/2 - minDimQ*(1-cos225)) + "nm\n         " + (y/2 - minDimQ*(1-sin225)) +
+        "nm\n         " + x/2 + "nm\n         " + (y/2 - minDimQ) +
+        "nm\n         " + x/2 + "nm\n        -" + (y/2 - minDimQ) +
+        "nm\n         " + (x/2 - minDimQ*(1-cos225)) + "nm\n         -" + (y/2 - minDimQ*(1-sin225)) +
+        "nm\n         " + (x/2 - minDimQ*(1-cos45)) + "nm\n         -" + (y/2 - minDimQ*(1-cos45)) +
+        "nm\n         " + (x/2 - minDimQ*(1-sin225)) + "nm\n         -" + (y/2 - minDimQ*(1-cos225)) +
+        "nm\n         " + (x/2 - minDimQ) + "nm\n        -" + y/2 +
+        "nm\n        -" + (x/2 - minDimQ) + "nm\n        -" + y/2 +
+        "nm\n        -" + (x/2 - minDimQ*(1-sin225)) + "nm\n         -" + (y/2 - minDimQ*(1-cos225)) +
+        "nm\n        -" + (x/2 - minDimQ*(1-cos45)) + "nm\n         -" + (y/2 - minDimQ*(1-cos45)) +
+        "nm\n        -" + (x/2 - minDimQ*(1-cos225)) + "nm\n         -" + (y/2 - minDimQ*(1-sin225)) +
+        "nm\n" +
+        "       }\n";
+    if (top && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        top = 1\n       }\n";
+    } else if (!top && intern && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        intern = 1\n       }\n";
+    } else if (!top && !intern && copper) {
+      layermask = "       ha:layer_mask {\n        copper = 1\n        bottom = 1\n       }\n";
+    } else if (top && mask) {
+      layermask = "       ha:layer_mask {\n        mask = 1\n        top = 1\n       }\n";
+      maskComb = "        sub = 1\n        auto = 1\n";
+    } else if (!top && mask) {
+      layermask = "       ha:layer_mask {\n        mask = 1\n        bottom = 1\n       }\n";
+      maskComb = "        sub = 1\n        auto = 1\n";
+    }
+    String combining = "       ha:combining {\n" + maskComb + "       }\n      }\n";
+    return shape + layermask + combining;
+  }
+  
+  private String obroundShape(long x, long y, boolean top, boolean intern, boolean copper, boolean mask) {
     String maskComb = "";
     String layermask = "";
     long minDim = x;
@@ -386,14 +454,32 @@ public class Footprint
                       p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true) 
           + rectShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
                       p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, false, false, false, true);
-    } else if (p.kicadDrillShape == 'O' && p.kicadPadAttributeType.startsWith("STD")) {
+    } else if (p.kicadDrillShape == 'r' && p.kicadPadAttributeType.startsWith("STD")) {
       shapes = shapes
           + roundRectShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
           + roundRectShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, true, true, false) 
           + roundRectShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, false, true, false) 
           + roundRectShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
-                           p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true) 
+                      p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true) 
           + roundRectShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                      p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, false, false, false, true);
+    } else if (p.kicadDrillShape == 'O' && p.kicadPadAttributeType.startsWith("STD")) {
+      shapes = shapes
+          + obroundShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
+          + obroundShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, true, true, false) 
+          + obroundShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, false, true, false) 
+          + obroundShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                           p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true) 
+          + obroundShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                           p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, false, false, false, true);
+    } else if (p.kicadDrillShape == 'o' && p.kicadPadAttributeType.startsWith("STD")) {
+      shapes = shapes
+          + octagonShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
+          + octagonShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, true, true, false) 
+          + octagonShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, false, false, true, false) 
+          + octagonShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                           p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true) 
+          + octagonShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
                            p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, false, false, false, true);
     } else if (p.kicadDrillShape == 'R' 
                && (p.kicadPadAttributeType.startsWith("SMD") || p.kicadPadAttributeType.startsWith("CONN"))) {
@@ -401,11 +487,23 @@ public class Footprint
           + rectShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
           + rectShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
                       p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true);
-    } else if (p.kicadDrillShape == 'O' 
+    } else if (p.kicadDrillShape == 'r' 
                && (p.kicadPadAttributeType.startsWith("SMD") || p.kicadPadAttributeType.startsWith("CONN"))) {
       shapes = shapes
           + roundRectShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
           + roundRectShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                      p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true);
+    } else if (p.kicadDrillShape == 'O' 
+               && (p.kicadPadAttributeType.startsWith("SMD") || p.kicadPadAttributeType.startsWith("CONN"))) {
+      shapes = shapes
+          + obroundShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
+          + obroundShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
+                           p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true);
+    } else if (p.kicadDrillShape == 'o' 
+               && (p.kicadPadAttributeType.startsWith("SMD") || p.kicadPadAttributeType.startsWith("CONN"))) {
+      shapes = shapes
+          + octagonShape(p.kicadShapeXsizeNm, p.kicadShapeYsizeNm, true, false, true, false) 
+          + octagonShape(p.kicadShapeXsizeNm + p.gEDAdefaultSolderMaskRelief,
                            p.kicadShapeYsizeNm + p.gEDAdefaultSolderMaskRelief, true, false, false, true);
     } else if (p.kicadDrillShape == 'C'
                && (p.kicadPadAttributeType.startsWith("SMD") || p.kicadPadAttributeType.startsWith("CONN"))) {
@@ -452,11 +550,9 @@ public class Footprint
 
   private String lihataPadStackObjects() {
     String padStacks = "";
-    for (int counter = 0; counter < FPFeatureCount; counter++)
+    for (Pad p : pads)
       {
-        if (footprintElements[counter].isPad()) {
-          padStacks = padStacks + footprintElements[counter].generateElement(0, 0, 1.0f, "pcb-rnd");
-        }
+          padStacks = padStacks + p.generateElement(0, 0, 1.0f, "pcb-rnd");
       }
     return "   li:objects {\n"
 	+ padStacks
@@ -465,16 +561,16 @@ public class Footprint
 
   private String lihataTopObjects() {
     String top = "";
-    for (int counter = 0; counter < FPFeatureCount; counter++)
+    for (FootprintElementArchetype fea : footprintElements)
       {
-        if (footprintElements[counter].isTop()) {
-          top = top + footprintElements[counter].generateElement(0, 0, 1.0f, "pcb-rnd");
+        if (fea.isTop()) {
+          top = top + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
         }
       }
-    for (int counter = 0; counter < textDescriptorCount; counter++)
+    for (FootprintElementArchetype fea : moduleTextDescriptors)
       {
-        if (moduleTextDescriptors[counter].isTop()) {
-          top = top + moduleTextDescriptors[counter].generateElement(0, 0, 1.0f, "pcb-rnd");
+        if (fea.isTop()) {
+          top = top + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
         }
       }
     return "     li:objects {\n"
@@ -484,23 +580,22 @@ public class Footprint
 
   private String lihataBottomObjects() {
     String bottom = "";
-    for (int counter = 0; counter < FPFeatureCount; counter++)
+    for (FootprintElementArchetype fea : footprintElements)
       {
-        if (footprintElements[counter].isBottom()) {
-          bottom = bottom + footprintElements[counter].generateElement(0, 0, 1.0f, "pcb-rnd");
+        if (fea.isBottom()) {
+          bottom = bottom + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
         }
       }
-    for (int counter = 0; counter < textDescriptorCount; counter++)
+    for (FootprintElementArchetype fea : moduleTextDescriptors)
       {
-        if (moduleTextDescriptors[counter].isBottom()) {
-          bottom = bottom + moduleTextDescriptors[counter].generateElement(0, 0, 1.0f, "pcb-rnd");
+        if (fea.isBottom()) {
+          bottom = bottom + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
         }
       }
     return "     li:objects {\n"
 	+ bottom
 	+ "     }\n";
   }
-
 
   private String lihataLayers() {
     return "   li:layers {\n"
@@ -544,6 +639,8 @@ public class Footprint
   }
 
   private String lihataSubc() {
+    padStackProtoCount = 0; // need to reset it if converting > 1 footprint
+    padStackHashes.clear();
     return lihataSubcHeader() + lihataSubcAttributes() + lihataSubcData() + lihataSubcFooter();
   }
 
@@ -552,7 +649,7 @@ public class Footprint
     String assembledElement = "";
     if (format.equals("pcb")) {
       assembledElement = licenceText1 + footprintName + licenceText2;
-      if (padCount > 0)
+      if (pads.size() > 0)
       	{
           assembledElement = assembledElement + 
               clearanceWarningNotice1 + clearanceWarningNotice2 ;
@@ -571,38 +668,31 @@ public class Footprint
 
       // we start by generating a generic gEDA footprint Element[...] field
       // in case the Kicad module failed to have a text field "T0 .... "
-      // to base the gEDA element field on
       // We use the file name for the description, default text orientation
       // of 0, with an offset 250 mils to the right of centre, and 
       // text scaling of 100
-
       String gEDAfootprintElementField =
           "# Since the Kicad Module did not have a 'T0' field,\n" +
           "# The module name has been used for the Element description field\n" +
           "Element[\"\" \"" + footprintName +
           "\" \"\" \"\" 0 0 0 25000 0 100 \"\"]\n(\n";
 
-      if (textDescriptorCount > 0)
+      if (moduleTextDescriptors.size() > 0)
       	{
-          gEDAfootprintElementField = moduleTextDescriptors[0].generateGEDAtextField(0,0);
+          gEDAfootprintElementField = moduleTextDescriptors.get(0).generateElement(0,0, magnificationRatio, "pcb");
       	}
 
       assembledElement = assembledElement +
           ("# Footprint = module name: " + footprintName + "\n" +
-           "# Text descriptor count: " + textDescriptorCount + "\n" +
-           "# Draw segment object count: " + drawSegmentCount + "\n" +
-           "# Draw circle object count: " + drawCircleCount + "\n" +
-           "# Draw arc object count: " + drawArcCount + "\n" +
-           "# Pad count: " + padCount + "\n#\n" +
+           "# Pad count: " + pads.size() + "\n#\n" +
            gEDAfootprintElementField );
 
-      //		System.out.println(assembledElement);
-      for (int counter = 0; counter < FPFeatureCount; counter++)
+      for (FootprintElementArchetype fea : footprintElements)
       	{
           assembledElement = assembledElement +
-              footprintElements[counter].generateElement(xOffset,yOffset,magnificationRatio, format);
+              fea.generateElement(xOffset,yOffset,magnificationRatio, format);
       	}
-      return assembledElement;
+      return assembledElement + ")";
     } else {
       return lihataSubc();
     }
@@ -618,6 +708,96 @@ public class Footprint
     return reconstructedKicadModuleAsString;
   }
 
+///////////////////////////////////////////////////////////////////////
+  public static String[] exportFootprints(String libraryName, ArrayList<Footprint> footprints, String format,
+                                          float magnificationRatio, String convertedFootprintPath, boolean HTMLsummary,
+                                          boolean verbose) throws IOException {
+    // we can now step through the array of footprints
+    // and export a footprint for each of them, saving each
+    // one to a module_name.fp, and optionally create a gedasymbols.org
+    // compatible HTML segment for inclusion in a user index 
+
+    ArrayList<String> convertedFiles = new ArrayList<String>();
+    String defaultLibraryName = "Converted library: ";
+    String footprintFileName = "";
+
+    // we insert a heading for the HTML summary
+    String HTMLsummaryOfConvertedModules = "<html><h2>" +
+        defaultLibraryName + libraryName + "</h2>\n";
+    String htmlSummaryFileName = "";
+    
+    for (Footprint f : footprints) 
+      {
+      // we generate a string containing the GEDA footprint filename
+        footprintFileName = f.generateFootprintFilename(format);
+        htmlSummaryFileName = footprintFileName + ".html";
+
+        // we then append a listing for this particular footprint
+        // to the HTML summary
+        HTMLsummaryOfConvertedModules = HTMLsummaryOfConvertedModules +
+            "<li><a href=\"" +
+            libraryName + "/" +
+            footprintFileName + "\"> " +
+            footprintFileName + " </a> - " +
+            //            moduleDescriptionText +
+            " </li>\n";
+        
+        if (verbose)
+          {
+            System.out.println(footprintFileName);
+          }
+        
+        // a String variable to contain the footprint description
+        
+        String footprintData = "";
+        footprintData = footprintData +
+            f.generateFootprint(magnificationRatio, format);
+        
+        if (verbose)
+          {
+            System.out.println(footprintData);
+            // and we now use the toString method to return the module text
+            System.out.println("\n\n" + f + "\n\n");
+          }
+        elementWrite(convertedFootprintPath + footprintFileName, footprintData);
+        convertedFiles.add(footprintFileName);
+      }
+
+  
+  // having populated footprint objects in an array
+  // we now finish off the HTML summary of the created modules
+  
+  HTMLsummaryOfConvertedModules = HTMLsummaryOfConvertedModules + "\n</ul></html>\n";
+  if (verbose)
+    {
+      System.out.println(HTMLsummaryOfConvertedModules);
+    }
+  
+  // and we pass the HTML to a subroutine to save the summary to disc, using either a user
+  // supplied file name, or alternatively,  an auto generated name kicad_module_name-HTMLsummary.html
+  
+  if (HTMLsummary) {
+    elementWrite(convertedFootprintPath + htmlSummaryFileName, HTMLsummaryOfConvertedModules);
+  }
+  
+  return convertedFiles.toArray(new String[convertedFiles.size()]);
+  }
+
+
+  public static void elementWrite(String elementName,
+                                  String data) throws IOException {
+    try {
+      File newElement = new File(elementName);
+      PrintWriter elementOutput = new PrintWriter(newElement);
+      elementOutput.println(data);
+      elementOutput.close();
+    } catch(Exception e) {
+      System.out.println("There was an error saving: "
+                         + elementName); 
+      System.out.println(e);
+    }
+  }
+/////////////////////////////////////////////////////
   private long convertToNanometres(float rawValue, boolean metricSystem)
   {
     if (metricSystem) // metricSystem = units mm

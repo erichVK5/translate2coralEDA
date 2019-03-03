@@ -73,7 +73,7 @@ public class Circle extends FootprintElementArchetype
     return kicadCircleDescriptor;
   }
 
-  public void populateElement(String arg, boolean metric)
+  public void populateKicadElement(String arg, boolean metric)
   {
     float parsedValue = 0;
 		

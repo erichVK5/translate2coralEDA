@@ -77,7 +77,7 @@ public class FootprintHeader extends FootprintElementArchetype
     return kicadTextDescriptor;
   }
 
-  public void populateHeader(String arg, Boolean metric)
+  public void populateKicadElement(String arg, Boolean metric)
   {
     kicadTextDescriptor = arg;
 
@@ -129,13 +129,9 @@ public class FootprintHeader extends FootprintElementArchetype
         kicadDeviceDescription = tokens[2].replaceAll("[^a-zA-Z0-9.-]", " "); // avoid off by one error
 
       }
-    else if (tokens[0].startsWith("T1"))
-      {
-        output = ""; // we aren't very interested in a value for the footprint
-      }			// but may change our minds if a text drawing module is done
     else
       {
-        output = "Hmm, a Text Descriptor string was not passed to the object";
+        output = "Hmm, an suitable kicad Text Descriptor string was not passed to the FootPrintHeader";
       }
   }
 
@@ -157,7 +153,7 @@ public class FootprintHeader extends FootprintElementArchetype
   public String generateElement(long xOffset, long yOffset, float magnificationRatio, String format)
   {
     if (format.equals("pcb")) {
-      return "";
+      return generateGEDAtextField(xOffset, yOffset);
     } else {
       return lihataText(xOffset, yOffset, magnificationRatio);
     }

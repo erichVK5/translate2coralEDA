@@ -26,6 +26,7 @@
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -39,6 +40,9 @@ class BXLParser extends CADParser {
 
   private static String format;
 
+  static float magnificationRatio = 1.0f;
+  static String exportPath = "Converted/";
+  
   public BXLParser(String filename, String format, boolean verbose) {
     File BXLFile = new File(filename);
     if (!BXLFile.exists()) {
@@ -67,6 +71,8 @@ class BXLParser extends CADParser {
     PadStackList padStacks = new PadStackList();
     PinList pins = new PinList(0); // slots = 0
     List<String> convertedFiles = new ArrayList<String>();
+    ArrayList<Footprint> footprints = new ArrayList<Footprint>();
+    Footprint footprint;
 
     long xOffset = 0;
     long yOffset = 0; // used to justify symbol
@@ -90,6 +96,7 @@ class BXLParser extends CADParser {
         String [] tokens = currentLine.split(" ");
         String FPName = tokens[1].replaceAll("[\"]","");
 	FPName = FPName.replaceAll("[ /]","_"); // seriously, who puts slashes in filenames //
+        footprint = new Footprint(FPName);
         while (textBXL.hasNextLine() && (lastline != null) &&
                !currentLine.startsWith("EndPattern")) {
           lastline = textBXL.nextLine();// making nextLine() null safe 
@@ -97,33 +104,20 @@ class BXLParser extends CADParser {
           if (currentLine.startsWith("Pad")) {
             //System.out.println("#Making new pad: " + currentLine);
             Pad newPad = padStacks.GEDAPad(currentLine);
-            newElement = newElement
-                + newPad.generateGEDAelement(xOffset,yOffset,1.0f);
+            footprint.add(newPad);
+            //            footprint.pads.add(newPad);
           } else if (currentLine.startsWith("Line (Layer TOP_SILK")) {
             DrawnElement silkLine = new DrawnElement();
             silkLine.populateBXLElement(currentLine);
-            newElement = newElement
-                + silkLine.generateGEDAelement(xOffset,yOffset,1.0f);
+            footprint.add(silkLine);
           } else if (currentLine.startsWith("Arc (Layer TOP_SILK")) {
             Arc silkArc = new Arc();
             silkArc.populateBXLElement(currentLine);
-            newElement = newElement
-                + silkArc.generateGEDAelement(xOffset,yOffset,1.0f);
+            footprint.add(silkArc);
           }
         }
 
-        // we now build the geda PCB footprint
-        elData = "Element[\"\" \""
-            + FPName
-            + "\" \"\" \"\" 0 0 0 25000 0 100 \"\"]\n(\n"
-            + newElement
-            + ")";
-        elName = FPName + ".fp";
-
-        // we now write the element to a file
-        elementWrite(elName, elData);
-        // add the FP to our list of converted elements
-        convertedFiles.add(elName); 
+        footprints.add(footprint);
         newElement = ""; // reset the variable for batch mode
 
       } else if (currentLine.startsWith("Symbol ")) {
@@ -236,6 +230,12 @@ class BXLParser extends CADParser {
         symAttributes = "";
       }
     }
+
+    List<String> footprintsExported
+        = Arrays.asList(Footprint.exportFootprints(BXLFile, footprints, format,
+                                                   magnificationRatio, exportPath,
+                                                   true, verbose));
+    convertedFiles.addAll(footprintsExported);    
     return convertedFiles.toArray(new String[convertedFiles.size()]);
   } 
 }

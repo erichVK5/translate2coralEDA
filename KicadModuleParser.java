@@ -26,7 +26,6 @@
 //    Erich S. Heinzle a1039181@gmail.com
 
 
-
 import java.util.Scanner;
 import java.io.*;
 import java.util.ArrayList;
@@ -94,22 +93,12 @@ public class KicadModuleParser extends CADParser
 
     Scanner kicadLibraryFile;
     File file1 = new File(kicadModuleFileName);
-    if (!usingStdInForModule)
+    if (!file1.exists())
       {
-        // if the user specified a kicad module with command line arguments
-        // we will now look for the kicad module passed on the command line
-        //	                File file1 = new File(kicadModuleFileName);
-        if (!file1.exists())
-          {
-            System.out.println("Hmm, the library file " + kicadModuleFileName + " was not found.");
-            System.exit(0);
-          }
-        kicadLibraryFile = new Scanner(file1);
+        System.out.println("Hmm, the library file " + kicadModuleFileName + " was not found.");
+        System.exit(0);
       }
-    else // we are using StdIn for the module, and args is of length one
-      {
-        kicadLibraryFile = new Scanner(System.in);
-      }
+    kicadLibraryFile = new Scanner(file1);
 
     // sort out the default preliminary licencing comments that will prepend the generated footprints  
     if (useDefaultAuthorCredits)
@@ -141,7 +130,7 @@ public class KicadModuleParser extends CADParser
 
     int extractedModuleLineCounter = 0;
     int extractedModuleCount = 0;
-    Footprint[] footprintsInLibrary = new Footprint[100];
+    ArrayList<Footprint> footprintsInLibrary = new ArrayList<Footprint>();
     float magnificationRatio = 1.0f;
 
     boolean firstLine = true;
@@ -186,16 +175,12 @@ public class KicadModuleParser extends CADParser
               {
                 modulesInLibraryCount++;
               } 
-            //			System.out.println(loadedLibraryStringArray[loadedLibraryLineCounter]);
             loadedLibraryLineCounter++;
-            //			System.out.println("Modules in library count: " + modulesInLibraryCount +
-            //					"\nLoaded library line cout: " + loadedLibraryLineCounter );
           }
-	//	kicadLibraryFile.close();
 
         // we create a string array to store individual module definitions
 
-        String[] extractedModuleDefinition = new String[3000];
+        ArrayList<String> extractedModuleDefinition = new ArrayList<String>();
         boolean inModule = false;
 
         for (int counter = 0; counter < loadedLibraryLineCounter; counter++)
@@ -224,8 +209,7 @@ public class KicadModuleParser extends CADParser
             else if (loadedLibraryStringArray[counter].startsWith("$EndMOD"))
               {
                 inModule = false;
-                extractedModuleDefinition[extractedModuleLineCounter] =
-                    loadedLibraryStringArray[counter];
+                extractedModuleDefinition.add(loadedLibraryStringArray[counter]);
                 // having found and extracted a module
                 // we now store it in a footprint object
                 if (verboseMode)
@@ -238,22 +222,18 @@ public class KicadModuleParser extends CADParser
                 // we may be able to dispence with the array
 
                 tempStringArg = "";
-                for (int stringCounter = 0; stringCounter < extractedModuleLineCounter; stringCounter++)
+                for (String s : extractedModuleDefinition)
                   {
-                    tempStringArg = tempStringArg + "\n" +
-                        extractedModuleDefinition[stringCounter];
+                    tempStringArg = tempStringArg + "\n" + s;
                   }
-                footprintsInLibrary[extractedModuleCount] = new Footprint(tempStringArg, legacyKicadMmMetricUnits, minimumViaAndDrillSizeNM);
-                extractedModuleLineCounter = 0;
+                extractedModuleDefinition.clear();
+                footprintsInLibrary.add(new Footprint(tempStringArg, legacyKicadMmMetricUnits, minimumViaAndDrillSizeNM));
                 extractedModuleCount++;
-				
               }
 
             if (inModule)
               {
-                extractedModuleDefinition[extractedModuleLineCounter] =
-                    loadedLibraryStringArray[counter];
-                extractedModuleLineCounter++;
+                extractedModuleDefinition.add(loadedLibraryStringArray[counter]);
               }
 
           }	
@@ -357,7 +337,7 @@ public class KicadModuleParser extends CADParser
                       }
                     inModule = false;
                     gotOneModule = true;
-                    footprintsInLibrary[extractedModuleCount] = new Footprint(completeModule, legacyKicadMmMetricUnits, minimumViaAndDrillSizeNM);
+                    footprintsInLibrary.add(new Footprint(completeModule, legacyKicadMmMetricUnits, minimumViaAndDrillSizeNM));
                     completeModule = "";
                     extractedModuleCount++;
                   }
@@ -365,15 +345,11 @@ public class KicadModuleParser extends CADParser
           }
 
       }
-    //	we close kicadLibaryFile, which wasn't used if stdin was the source of the module
-    //      and wwould have been used if the user specified a module filename 
-    kicadLibraryFile.close(); // we'll try it down here
-
-
+    //	we close kicadLibaryFile specified by the module filename 
+    kicadLibraryFile.close();
 
     // we now have finished parsing the library file, and we have an array of footprint objects
-    // that we can interogate, namely:  footprintsInLibrary[extractedModuleCount] 
-
+    // that we can interogate, namely:  footprintsInLibrary 
     if (verboseMode)
       {
         System.out.println("Just closed the open file, now counting to: " + 
@@ -381,116 +357,8 @@ public class KicadModuleParser extends CADParser
                            "versus counted modules in library: " + modulesInLibraryCount);
       }
 
-    // we can now step through the array of footprints we generated from the kicad module(s)
-    // we generate a GEDA format footprint for each of them, save each one to a module_name.fp,
-    // and create a gedasymbols.org compatible HTML segment for inclusion in a user index 
-
-    // we insert a heading for the HTML summary
-    String HTMLsummaryOfConvertedModules = "<html><h2>" +
-        kicadModuleFileName + "</h2>\n";
-
-    for (int counter = 0; counter < extractedModuleCount; counter++)
-      {
-        if (verboseMode)
-          {
-            System.out.println("Footprint object array index: " + counter);
-          }
-
-        // we generate a string containing the GEDA footprint filename
-        String outputFileName = footprintsInLibrary[counter].generateFootprintFilename(format);
-
-        // we then append a listing for this particular footprint
-        // to the HTML summary
-        HTMLsummaryOfConvertedModules = HTMLsummaryOfConvertedModules +
-            "<li><a href=\"" +
-            htmlSummaryPathToConvertedModule +
-            kicadModuleFileName + "/" +
-            outputFileName + "\"> " +
-            outputFileName + " </a> - " +
-            moduleDescriptionText +
-            " </li>\n";
-
-        if (!quietMode)
-          {
-            System.out.println(outputFileName);
-          }
-
-        // a String variable to contain the footprint description
-        String footprintData = "";
-
-        // we start by prepending some preliminaries, which can include author credit
-        // as well as licencing information, and use either the default or user
-        // supplied footprint preliminary comments file 
-
-        if (!file2.exists())
-          {
-            if (format.equals("pcb")) {
-              footprintData = "# No element preliminaries text file found";
-            }
-          }
-        else
-          {
-            Scanner footprintPreliminaryComments = new Scanner(file2);
-            while (footprintPreliminaryComments.hasNext())
-              {
-                footprintData = footprintData + footprintPreliminaryComments.nextLine() + "\n";
-              }
-            footprintPreliminaryComments.close();
-          }
-
-        // we now append a generated element header and it's fields
-        if (generateFontGlyphs) {
-
-          //////////////////////////
-          // glyphs were working in Kicad Module2GEDA, need to reinstate
-          /////////////////////////
-
-          /*				footprintData = "Symbol(\'"
-                                        + counter
-                                        need to reinstate glyphs sometime		+ "\' 12)\n(\n"
-                                        + footprintsInLibrary[counter].generateGEDAglyph(magnificationRatio);*/
-        } else {
-          footprintData = footprintData +
-              footprintsInLibrary[counter].generateFootprint(magnificationRatio, format);
-        }
-        // this is where we could insert some Attribute fields
-        //                        System.out.println("Attribute(use-licence \"GPLv3\")");
-        //                        System.out.println("Attribute(dist-licence \"unlimited\")");
-        //                        System.out.println("Attribute(author xxxx)"); // default licence is GPLv3
-        // but ? PCB breaks when these are inserted due to
-        // ? bad formatting or ? a missing share/pcb/listLibraryContents.sh file
-
-        // and we now finish off the footprint element with a bracket
-
-        if (format.equals("pcb")) { //this belongs in Footprint.java
-          footprintData = footprintData + ")";
-        }
-
-        if (verboseMode)
-          {
-            System.out.println(footprintData);
-            // and we now use the toString method to return the module text
-            System.out.println("\n\n" + footprintsInLibrary[counter] + "\n\n");
-          }
-        elementWrite(convertedKicadModulePath + outputFileName, footprintData);
-        convertedFiles.add(outputFileName);
-      }
-
-    // having populated footprint objects in an array
-    // we now finish off the HTML summary of the created modules
-
-    HTMLsummaryOfConvertedModules = HTMLsummaryOfConvertedModules + "\n</ul></html>\n";
-    if (verboseMode)
-      {
-        System.out.println(HTMLsummaryOfConvertedModules);
-      }
-
-    // and we pass the HTML to a subroutine to save the summary to disc, using either a user
-    // supplied file name, or alternatively,  an auto generated name kicad_module_name-HTMLsummary.html
-
-    elementWrite(convertedKicadModulePath + htmlSummaryFileName, HTMLsummaryOfConvertedModules);
-
-    return convertedFiles.toArray(new String[convertedFiles.size()]);
+    return Footprint.exportFootprints(kicadModuleFileName, footprintsInLibrary, format,
+                                      magnificationRatio, convertedKicadModulePath, true, verboseMode);
   }
 
   // we need this method to see if we are at the end of an s-file module, and to see if we
