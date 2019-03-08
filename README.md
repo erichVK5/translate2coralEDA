@@ -48,4 +48,6 @@ TODO:
 - add SVG font conversion support
 - add SVG path conversion support
 - port QUCS and LT-Spice symbols to xschem for use with converted network 
+- fine tune corner cases where polygonal pours have curved outlines in Eagle
+
 Licence GPL 2.0
