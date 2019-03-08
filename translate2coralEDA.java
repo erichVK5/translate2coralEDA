@@ -220,6 +220,31 @@ public class translate2coralEDA {
 
   } 
 
+  // we use a modified version of Phillip Knirsch's gerber
+  // parser/plotter code from the turn of the century
+  // http://www.wizards.de/phil/java/rs274x.html
+  // this routine exports a PCB footprint version of the gerber file
+  // - arcs now work, and export as lht top copper feature in subc 
+  // - polygonal pours export to subc top copper, unless...
+  // - polygonal pour is 4 or 8 sided, then it is made into a padstack
+  // - heuristics for pin/pad vs wire are tricky though due to
+  //   some naughty EDAs painting some features instead of flashing
+  private static String [] parseGerber(String gerberFile)
+    throws IOException {
+
+    File input = new File(gerberFile);
+    Scanner gerberData = new Scanner(input);
+    String gerbText = "";
+    while (gerberData.hasNextLine()) {
+      gerbText = gerbText + gerberData.nextLine();
+    }
+    Plotter gerberPlotter = new Plotter();
+    gerberPlotter.setScale(1.0, 1.0);
+    gerberPlotter.setSize(800, 640); // might make it behave
+    return gerberPlotter.generatePCBFile(gerbText,gerberFile);
+
+  }
+
   // Hershey files provide stroked font information in NIST format,
   // sometimes found in the wild in .py files
   private static String [] parseHersheyData(String hersheyFilename) throws IOException {
@@ -287,53 +312,6 @@ public class translate2coralEDA {
 
   } 
 
-  // we use a modified version of Phillip Knirsch's gerber
-  // parser/plotter code from the turn of the century
-  // http://www.wizards.de/phil/java/rs274x.html
-  // this routine exports a PCB footprint version of the gerber file
-  // It still needs a bit of work, i.e. 
-  // - arcs might be a bit broken
-  // - a bit verbose with polygon processing
-  // - only exports a footprint, not a layout file
-  // - would need heuristics for pin/pad vs wire/trace detection
-  // - this is tricky though due to naughty EDAs painting some features
-  //   instead of flashing
-  private static String [] parseGerber(String gerberFile)
-    throws IOException {
-    File input = new File(gerberFile);
-    Scanner gerberData = new Scanner(input);
-    String gerbText = "";
-    while (gerberData.hasNextLine()) {
-      gerbText = gerbText + gerberData.nextLine();
-    }
-    Plotter gerberPlotter = new Plotter();
-    gerberPlotter.setScale(1.0, 1.0);
-    gerberPlotter.setSize(800, 640); // might make it behave
-    String [] retString = new String [1];
-    try {
-      gerberPlotter.generatePCBFile(gerbText,gerberFile);
-      retString[0] = gerberFile + ".fp";
-    }
-    catch (Exception e) {
-      retString[0] = "Error: Gerber plotter unable to parse file.";
-      defaultFileIOError(e);
-    }
-    return retString;
-  }
-
-  public static void elementWrite(String elementName,
-                                  String data) throws IOException {
-    try {
-      File newElement = new File(elementName);
-      PrintWriter elementOutput = new PrintWriter(newElement);
-      elementOutput.println(data);
-      elementOutput.close();
-    } catch(Exception e) {
-      System.out.println("There was an error saving: "
-                         + elementName); 
-      System.out.println(e);
-    }
-  }
 
   public static void printHelp() {
     System.out.println("usage:\n\n\tjava translate2coralEDA BSDLFILE.bsd\n\n"
@@ -353,4 +331,3 @@ public class translate2coralEDA {
   }
 
 }
-

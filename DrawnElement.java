@@ -145,6 +145,25 @@ public class DrawnElement extends FootprintElementArchetype
     }
   }
 
+
+  // here, we populate the line object with data
+  // extracted from a gerber file
+  // noting that the y-axis is inverted vs gEDA/kicad
+  public void populateGerberElement(long x1,
+                                    long y1,
+                                    long x2,
+                                    long y2,
+                                    long thickness,
+                                    int pinNum) {
+
+        kicadLayer = 15; // i.e. F.Cu
+        xCoordOneNm = x1;
+        yCoordOneNm = y1;
+        xCoordTwoNm = x2;
+        yCoordTwoNm = y2;
+        lineThicknessNm = thickness;
+  }
+  
   // we use this to create an array of four silk line objects from 
   // an Eagle rectangle definition when passed a rectangle
   // definition from the presumed top silk layer, plus a fatter
@@ -455,6 +474,10 @@ public class DrawnElement extends FootprintElementArchetype
     return kicadLayer == 21;
   }
 
+  public boolean isTopCopper() {
+    return kicadLayer == 15;
+  }
+  
   public boolean isBottom() {
     return kicadLayer == 20;
   }

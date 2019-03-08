@@ -403,6 +403,8 @@ public class Pad extends FootprintElementArchetype
     //              System.out.println("finished populating pad object");
   }
 
+
+  // TODO - test shape=long pad types
   public void populateEagleElement(String padDef) {
     String [] tokens = padDef.split(" ");
     for (String token : tokens) {
@@ -420,11 +422,16 @@ public class Pad extends FootprintElementArchetype
         kicadShapePadName = kicadShapeNetName;
       } else if (token.startsWith("shape=")) {
         String temp = token.substring(6).replaceAll("[\"]","");
-        System.out.println("Shape found is " + temp); 
+        //        System.out.println("Shape found is " + temp); 
         if (temp.startsWith("octag"))
             {
-              System.out.println("Shape type is 'o'"); 
-              kicadDrillShape = 'o'; //kludge for now for octagon
+              //    System.out.println("Shape type is 'o'"); 
+              kicadDrillShape = 'o'; // kludge for octagon
+            }
+        else if (temp.startsWith("long"))
+            {
+              //    System.out.println("Shape type is 'O'"); 
+              kicadDrillShape = 'O'; // obround
             }
       } else if (token.startsWith("x=")) {
         token = token.substring(2);
@@ -496,6 +503,31 @@ public class Pad extends FootprintElementArchetype
 
   }
 
+  // here, we populate the pad object with data
+  // extracted from a gerber file
+  // noting that y-coords are inverted relative
+  public void populateGerberElement(long w,
+                                    long h,
+                                    long x,
+                                    long y,
+                                    char shape,
+                                    String attr,
+                                    int pinNum) {
+
+    kicadShapeXsizeNm = w;
+    kicadShapeYsizeNm = h;
+    kicadPadPositionXNm = x;
+    kicadPadPositionYNm = y;
+    kicadDrillShape = shape;
+    kicadShapeOrientation = 0;
+    kicadDrillOneSizeNm = 0;
+    kicadPadAttributeType = attr;
+    kicadShapePadName = "" + pinNum;
+    kicadShapeNetName = kicadShapePadName;
+    // no slots for planar copper features, so...
+    kicadDrillShapeTwo = '0';
+  }
+  
   public boolean isPad() {
     return true;
   }

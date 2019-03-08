@@ -251,6 +251,24 @@ public class Arc extends FootprintElementArchetype
     }
   }
 
+  public void populateGerberElement(long cx1,
+                                    long cy1,
+                                    long thickness,
+                                    long radius,
+                                    double start,
+                                    double arc,
+                                    int pinNum) {
+
+        kicadLayer = 15; // i.e. F.Cu
+        xCoordNm = cx1;
+        yCoordNm = cy1;
+        radiusNm = radius;
+        lineThicknessNm = thickness;
+        gEDAstartAngle = (int) start;
+        gEDAdeltaAngle = (int) arc;
+        kicadDeltaAngle = -10*gEDAdeltaAngle;
+  }
+  
   // here, we populate the line object with a string
   // extracted from a Kicad module    
   public void populateKicadElement(String arg, boolean metric)
@@ -429,16 +447,35 @@ public class Arc extends FootprintElementArchetype
       }
   }
 
+  // we use this for polygon outlines in Eagle, which can employ arcs
+  public long [] asSegments() {
+    int nSections = 1;
+    float ddelta = gEDAdeltaAngle/nSections;
+    long [] points = new long[2*nSections + 2];
+    points[0] = xCoordNm + (long)(radiusNm*Math.cos(gEDAstartAngle));
+    points[1] = yCoordNm + (long)(radiusNm*Math.sin(gEDAstartAngle));
+    System.out.println("About to calculate arc segments");
+    for (int i = 2; i < 2*nSections; i = i+2) {
+      points[i] = xCoordNm
+          + (long) (radiusNm*Math.cos(gEDAstartAngle + i*ddelta/2));
+      points[i+1] = yCoordNm
+          + (long) (radiusNm*Math.sin(gEDAstartAngle + i*ddelta/2));
+      System.out.println("Points: " + points[i] + ", " + points[i+1]);
+    }
+    System.out.println("arc segments calculated");
+    return points;
+  }
+  
   public String lihataArc(long xOffset, long yOffset, float magnificationRatio) {
     return "      ha:arc." + arcCount++ + " {\n" +
 	"       clearance = 0.0\n" +
 	"       astart = " + gEDAstartAngle + "\n" +
 	"       thickness = " + lineThicknessNm + "nm\n" +
-	"       width = " + radiusNm*2 + "nm\n" +
-	"       height = " + radiusNm*2 + "nm\n" +
+	"       width = " + radiusNm + "nm\n" +
+	"       height = " + radiusNm + "nm\n" +
 	"       adelta = " + gEDAdeltaAngle + "\n" +
-	"       x = " + (long)((xCoordNm + xOffsetNm + xOffsetNm)*magnificationRatio) + "nm\n" +
-	"       y = " + (long)((yCoordNm + xOffsetNm + yOffsetNm)*magnificationRatio) + "nm\n" +
+	"       x = " + (long)((xCoordNm + xOffsetNm)*magnificationRatio) + "nm\n" +
+	"       y = " + (long)((yCoordNm + xOffsetNm)*magnificationRatio) + "nm\n" +
 	"       ha:attributes {\n       }\n       ha:flags {\n       }\n      }\n";
   }
 
@@ -497,7 +534,11 @@ public class Arc extends FootprintElementArchetype
   }
 
   public boolean isTop() {
-    return true; // TODO: needs to reflect actual layer for object
+    return kicadLayer == 21;
+  }
+
+  public boolean isTopCopper() {
+    return kicadLayer == 15;
   }
 
 }

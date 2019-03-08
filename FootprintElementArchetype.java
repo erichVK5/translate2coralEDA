@@ -35,6 +35,7 @@ public class FootprintElementArchetype
   static int textCount = 0;
   static int padStackProtos = 0;
   static int padstackInstances = 0;
+  static int pourCount = 0;
 
   public long Xposition()
   {
@@ -85,7 +86,15 @@ public class FootprintElementArchetype
   public boolean isTop() {
     return false;
   }
-	
+
+  public boolean isTopCopper() {
+    return false;
+  }
+
+  public boolean isBottomCopper() {
+    return false;
+  }
+
   public boolean isBottom() {
     return false;
   }

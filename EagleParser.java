@@ -238,8 +238,18 @@ class EagleParser extends CADParser {
                      (layers.isTopCopper(currentLine) ||
                       layers.isBottomCopper(currentLine) ||
                       layers.isDrawnTopSilk(currentLine))) {
-            System.out.println("Polygon omitted in: " + FPName + "\n\t"
-                               +  currentLine);
+            String polyDef = currentLine; 
+            while (packagesBundle.hasNextLine() &&
+                   !currentLine.startsWith("</polygon")) {
+              currentLine = packagesBundle.nextLine().trim();
+              polyDef = polyDef + currentLine;
+            }
+            PolyPour polyPour = new PolyPour();
+            polyPour.populateEagleElement(polyDef);
+            if (polyDef.contains("curve=")) {
+              System.out.println("Unsupported curved polygonal outline in: " + FPName); 
+            }
+            footprint.add(polyPour);
           }
 
           

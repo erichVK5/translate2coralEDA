@@ -75,7 +75,7 @@ public class Footprint
 
   String reconstructedKicadModuleAsString = ""; // we'll return this from the toString() method
 
-  private void setFootprintName(String name) {
+  public void setFootprintName(String name) {
     footprintName = name;
     if (footprintName.length() > 2) {
       if (footprintName.charAt(0) == '"') {
@@ -111,6 +111,11 @@ public class Footprint
     footprintElements.add(p);
     pads.add(p);
   }
+
+  public void add(PolyPour pp) {
+    footprintElements.add(pp);
+  }
+
   
   public Footprint(String args, Boolean MmMetricUnits, long minimumViaAndDrillSizeNM)
   {
@@ -578,6 +583,44 @@ public class Footprint
 	+ "     }\n";
   }
 
+  private String lihataTopCopperObjects() {
+    String top = "";
+    for (FootprintElementArchetype fea : footprintElements)
+      {
+        if (fea.isTopCopper()) {
+          top = top + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
+        }
+      }
+    for (FootprintElementArchetype fea : moduleTextDescriptors)
+      {
+        if (fea.isTopCopper()) {
+          top = top + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
+        }
+      }
+    return "     li:objects {\n"
+	+ top
+	+ "     }\n";
+  }
+
+  private String lihataBottomCopperObjects() {
+    String bottom = "";
+    for (FootprintElementArchetype fea : footprintElements)
+      {
+        if (fea.isBottomCopper()) {
+          bottom = bottom + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
+        }
+      }
+    for (FootprintElementArchetype fea : moduleTextDescriptors)
+      {
+        if (fea.isBottomCopper()) {
+          bottom = bottom + fea.generateElement(0, 0, 1.0f, "pcb-rnd");
+        }
+      }
+    return "     li:objects {\n"
+	+ bottom
+	+ "     }\n";
+  }
+  
   private String lihataBottomObjects() {
     String bottom = "";
     for (FootprintElementArchetype fea : footprintElements)
@@ -599,20 +642,26 @@ public class Footprint
 
   private String lihataLayers() {
     return "   li:layers {\n"
-        //	+ " ......\n"  copper layers can go here
 	+ "    ha:top-silk {\n     lid = 0\n     ha:type {\n      silk = 1\n      top = 1\n     }\n"
 	+ lihataTopObjects()
 	+ "     ha:combining {\n      auto = 1\n     }\n    }\n"
-	+ "    ha:bottom-silk {\n     lid = 1\n     ha:type {\n      silk = 1\n      bottom = 1\n     }\n"
+	+ "    ha:top-sig {\n     lid = 1\n     ha:type {\n      copper = 1\n      top = 1\n     }\n"
+	+ lihataTopCopperObjects()
+	+ "     ha:combining {\n      auto = 1\n     }\n    }\n"
+        + "    ha:bottom-sig {\n     lid = 2\n     ha:type {\n      copper = 1\n      bottom = 1\n     }\n"
+	+ lihataBottomCopperObjects()
+	+ "     ha:combining {\n      auto = 1\n     }\n    }\n"
+
+	+ "    ha:bottom-silk {\n     lid = 3\n     ha:type {\n      silk = 1\n      bottom = 1\n     }\n"
 	+ lihataBottomObjects()
 	+ "     ha:combining {\n      auto = 1\n     }\n    }\n"
-	+ "    ha:subc-aux {\n     lid = 2\n     ha:type {\n      top = 1\n      misc = 1\n"
+	+ "    ha:subc-aux {\n     lid = 4\n     ha:type {\n      top = 1\n      misc = 1\n"
 	+ "      virtual = 1\n     }\n     li:objects {\n      ha:line." + FootprintElementArchetype.lineCount++
 	+ "14 {\n"
 	+ "       clearance = 0.0\n       y2 = 0.0\n       thickness = 0.1mm\n"
 	+ "       ha:attributes {\n        subc-role = pnp-origin\n       }\n       x1 = 0.0\n"
 	+ "       x2 = 0.0\n       ha:flags {\n       }\n       y1 = 0.0\n      }\n"
-	+ "      ha:line.17 {\n       clearance = 0.0\n       y2 = 0.0\n"
+	+ "      ha:line." + FootprintElementArchetype.lineCount++ + " {\n       clearance = 0.0\n       y2 = 0.0\n"
 	+ "       thickness = 0.1mm\n       ha:attributes {\n        subc-role = origin\n"
 	+ "       }\n       x1 = 0.0\n       x2 = 0.0\n       ha:flags {\n       }\n"
 	+ "       y1 = 0.0\n      }\n      ha:line." + FootprintElementArchetype.lineCount++
@@ -646,6 +695,7 @@ public class Footprint
 
   public String generateFootprint(float magnificationRatio, String format)
   {
+    // System.out.println("About to export footprint...");
     String assembledElement = "";
     if (format.equals("pcb")) {
       assembledElement = licenceText1 + footprintName + licenceText2;
