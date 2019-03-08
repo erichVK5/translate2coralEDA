@@ -62,6 +62,7 @@ public class Arc extends FootprintElementArchetype
   // which is 254 microns, which is 0.254 mm
   // which is 0.01 inches, which is 10 mil = 10 thou
   long lineThicknessNm = defaultLineThicknessNm;
+  boolean reverseDirection = false;
 
   String kicadArcDescriptor = "";
 
@@ -139,6 +140,7 @@ public class Arc extends FootprintElementArchetype
     // makes the deltaAngle sign the same in all cases
     // by reversing the direction of the arc 
     if (gEDAdeltaAngle < 0) {
+      reverseDirection = true;
       long tempVal1 = xCoordTwoNm;
       long tempVal2 = yCoordTwoNm;
       xCoordTwoNm = xCoordOneNm;
@@ -449,20 +451,37 @@ public class Arc extends FootprintElementArchetype
 
   // we use this for polygon outlines in Eagle, which can employ arcs
   public long [] asSegments() {
-    int nSections = 1;
-    float ddelta = gEDAdeltaAngle/nSections;
+    int nSections = 9;
+    long [] xpoints = new long[nSections + 1];
+    long [] ypoints = new long[nSections + 1];
     long [] points = new long[2*nSections + 2];
-    points[0] = xCoordNm + (long)(radiusNm*Math.cos(gEDAstartAngle));
-    points[1] = yCoordNm + (long)(radiusNm*Math.sin(gEDAstartAngle));
-    System.out.println("About to calculate arc segments");
-    for (int i = 2; i < 2*nSections; i = i+2) {
-      points[i] = xCoordNm
-          + (long) (radiusNm*Math.cos(gEDAstartAngle + i*ddelta/2));
-      points[i+1] = yCoordNm
-          + (long) (radiusNm*Math.sin(gEDAstartAngle + i*ddelta/2));
-      System.out.println("Points: " + points[i] + ", " + points[i+1]);
+    double ddelta = Math.PI*(gEDAdeltaAngle/nSections)/180.0;
+    //System.out.println("start angle: " + gEDAdeltaAngle
+    //                   + "ddelta angle: " + ddelta );
+    for (int i = 0; i < nSections + 1; i++) {
+      xpoints[i] = xCoordNm
+          + (long) (radiusNm*Math.cos(Math.PI*gEDAstartAngle/180
+                                      + Math.PI + i*ddelta));
+      ypoints[i] = yCoordNm
+          + (long) (radiusNm*Math.sin(Math.PI*gEDAstartAngle/180
+                                      + Math.PI + i*ddelta));
+      // System.out.println("Points: " + xpoints[i] + ", " + ypoints[i]);
     }
-    System.out.println("arc segments calculated");
+
+    // to simplify things, we generate arcs with positive delta
+    // but this affects path definitions, such as for polygons
+    if (reverseDirection) { // in which case we reverse the point order
+      for (int j = 0; j < nSections + 1; j++) {
+        points[2*j] = xpoints[nSections - j];
+        points[2*j+1] = ypoints[nSections - j];
+      }
+    } else {
+      for (int j = 0; j < nSections + 1; j++) {
+        points[2*j] = xpoints[j];
+        points[2*j+1] = ypoints[j];
+      }
+    }
+    //System.out.println("arc segments calculated");
     return points;
   }
   

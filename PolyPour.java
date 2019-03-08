@@ -127,20 +127,23 @@ public class PolyPour extends FootprintElementArchetype
       } else if (coordCount == 2 && previousArc == true) {
         // most complicated scenario
         Arc a = new Arc();
-        a.populateEagleElement("x1=" + xOld/1000000.0 + " " +
-                               "y1=" + (-yOld/1000000.0) + " " +
-                               "x2=" + x/1000000.0 + " " +
-                               "y2=" + (-y/1000000.0) + " " +
-                               "curve=" + previousDegrees + " " +
-                               "width=1.0");
+        String eagleCmd = "x1=" + xOld/1000000.0 + " " +
+            "y1=" + (-yOld/1000000.0) + " " +
+            "x2=" + x/1000000.0 + " " +
+            "y2=" + (-y/1000000.0) + " " +
+            "curve=" + previousDegrees + " " +
+            "width=1.0";
+        //System.out.println("Eagle arc descriptor: " + eagleCmd);
+        a.populateEagleElement(eagleCmd);
         long [] points = a.asSegments();
-        System.out.println("About to approximate arc with segments");
+        //System.out.println("About to approximate arc with segments");
         for (int j = 2; j < (points.length - 2); j = j+2) {
           xCoord.add(points[j]);
           yCoord.add(-points[j+1]);
         }
         xCoord.add(x);
-        yCoord.add(y);                     
+        yCoord.add(y);
+        previousArc = false;
         if (pendingArc == true) {
           xOld = x;
           yOld = y;
@@ -151,8 +154,25 @@ public class PolyPour extends FootprintElementArchetype
       }
       coordCount = 0;
     }
-    System.out.println("Done with PolyPour elements");
-    System.out.println(lihataPolyPour(0,0,1.0f));
+    if (previousArc) {   // this catches a trailing curve=... in a final
+      Arc a = new Arc(); // vertex definition
+      String eagleCmd = "x1=" + xOld/1000000.0 + " " +
+          "y1=" + (-yOld/1000000.0) + " " +
+          "x2=" + xCoord.get(0)/1000000.0 + " " +
+          "y2=" + (-yCoord.get(0)/1000000.0) + " " +
+          "curve=" + previousDegrees + " " +
+          "width=1.0";
+      //System.out.println("Final Eagle arc descriptor: " + eagleCmd);
+      a.populateEagleElement(eagleCmd);
+      long [] points = a.asSegments();
+      //System.out.println("About to approximate arc with segments");
+      for (int j = 2; j < (points.length - 2); j = j+2) {
+        xCoord.add(points[j]);
+        yCoord.add(-points[j+1]);
+      }
+    }
+    //System.out.println("Done with PolyPour elements");
+    //System.out.println(lihataPolyPour(0,0,1.0f));
   }
 
   
