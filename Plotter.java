@@ -12,13 +12,19 @@
 // modifications by Erich Heinzle 2016, to
 //    support headless operation
 //
+// v1.3
 // Latest modifications to allow use in translate2geda.
 // Hacky but it works.
+//
+// v1.4 March 2019
+// polygonal pours now export to pcb-rnd sucircuit on top copper
+// polygonal features with 4 or 8 sides become padstacks in subcircuit
+// simple heuristics wrt pad size augment pad detection decisions
+// converted export infrastructure to use translate2coralEDA code
+//
 // TODO
 // - Graphic export is AWT 1.1 vintage and a bit broken currently.
 // - Eliminate use of doubles and use long nanometres for all dimensions
-//
-//
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -55,16 +61,16 @@ import java.util.Vector;
 import java.util.StringTokenizer;
 
 // EH addition
-// something for writing out PCB primitives
-import java.io.PrintWriter;
+// something for catching exceptions
 import java.io.*;
 // and some stuff for png graphics
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 
-//
+import java.util.ArrayList;
 
+//
 //
 // This is our virtual plotter. It is mainly a state machine simulating a
 // real plotter with some additional interface methods. Some of them are
@@ -75,8 +81,9 @@ import javax.imageio.ImageIO;
 class Plotter {
   static final boolean DEBUG = false; //true; //false;
 
+  ArrayList<Footprint> footprints = new ArrayList<Footprint>();
+  Footprint footprint = new Footprint("noNameSetForFootprintExport");
   Graphics   g;	// Graphics context into which the plotter renders        
-
   BufferedImage bi; // try this here
   Graphics2D bg;
 
@@ -117,15 +124,11 @@ class Plotter {
   double     tempny;
 
   // now, a flag for generating PCB layout drawing primitive
-  String     PCBelements = "";
   boolean    generatePCBelements = true;
-  String     outputFileName = "PCBlayoutData.pcb";
   long       rectangularPolygonPadCount = 0;
-
 
   // EH addition
   //        if (generatePCBelements) {
-  File outputFile = new File(outputFileName);
 
   // here endeth EH additions
   // we will make use of int  pos below as a pad/track label
@@ -197,148 +200,6 @@ class Plotter {
 
   // Helper array for parseDouble() method
   static final double[] div = {1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0};
-
-  private class LongPolygon {
-    int initialVertices = 20;
-    int vertexCount = 0;
-    int pointCount = 0;
-
-    long[] xcoords = new long[initialVertices];
-    long[] ycoords = new long[initialVertices];
-    long yPosition = 0;
-    long xPosition = 0;
-
-    public LongPolygon() {
-      pointCount = 0;
-      vertexCount = 0;
-      xPosition = 0;
-      yPosition = 0;
-      xcoords[pointCount] = 0;
-      ycoords[pointCount] = 0;      
-    }
-
-    public LongPolygon(long x, long y) { // x,y are position of polygon
-      pointCount = 0;
-      vertexCount = 0;
-      xcoords[pointCount] = x;
-      ycoords[pointCount] = y; // to allow centroid to return a meaningful value for null polygon
-      xPosition = x;
-      yPosition = y;
-    }
-    
-    public Polygon polygon() {
-      Polygon traditionalPolygon = new Polygon();
-      return traditionalPolygon;
-    }
-
-    public int npoints() {
-      return pointCount;
-    }
-
-    public void addPoint(long x, long y) {
-      xcoords[pointCount] = x;
-      ycoords[pointCount] = y;
-      if ((xcoords[0] == x) && (ycoords[0] == y)) {
-        vertexCount = pointCount;
-      }
-      if (DEBUG) {
-        System.out.println("Added longPoly points: x : " + x + ", y: " + y);
-      }
-      pointCount++;
-      if (pointCount == xcoords.length) {
-        long[] newXcoords = new long[xcoords.length * 2];
-        long[] newYcoords = new long[xcoords.length * 2];
-        for (int i = 0; i < pointCount; i++) {
-          newXcoords[i] = xcoords[i];
-          newYcoords[i] = ycoords[i];
-        }
-        xcoords = newXcoords;
-        ycoords = newYcoords;
-      }
-    }
-
-    public int vertexCount() {
-      return vertexCount;
-    }
-
-    public long centroidX() {
-      long Xcentroid = 0;
-      long Xmax = xcoords[0];
-      long Xmin = xcoords[0];
-      for (int i = 1; i < pointCount; i ++) {
-        if (Xmax < xcoords[i]) {
-          Xmax = xcoords[i];
-        }
-        if (Xmin > xcoords[i]) {
-          Xmin = xcoords[i];
-        }
-      }
-      Xcentroid = (Xmax - Xmin)/2 + Xmin;
-      return Xcentroid;
-    }
-
-    public long centroidY() {
-      long Ycentroid = 0;
-      long Ymax = ycoords[0];
-      long Ymin = ycoords[0];
-      for (int i = 1; i < pointCount; i ++) {
-        if (Ymax < ycoords[i]) {
-          Ymax = ycoords[i];
-        }
-        if (Ymin > ycoords[i]) {
-          Ymin = ycoords[i];
-        }
-      }
-      Ycentroid = (Ymax - Ymin)/2 + Ymin;
-      return Ycentroid;      
-    }
-
-    public long xSize(){
-      long xSize = 0;
-      long Xmax = xcoords[0];
-      long Xmin = xcoords[0];
-      for (int i = 1; i < pointCount; i ++) {
-        if (Xmax < xcoords[i]) {
-          Xmax = xcoords[i];
-        }
-        if (Xmin > xcoords[i]) {
-          Xmin = xcoords[i];
-        }
-      }
-      xSize = (Xmax - Xmin);
-      if (xSize < 0) {
-        xSize = -xSize;
-      }
-      return xSize;
-    }
-
-    public long ySize() {
-      long ySize = 0;
-      long Ymax = ycoords[0];
-      long Ymin = ycoords[0];
-      for (int i = 1; i < pointCount; i ++) {
-        if (Ymax < ycoords[i]) {
-          Ymax = ycoords[i];
-        }
-        if (Ymin > ycoords[i]) {
-          Ymin = ycoords[i];
-        }
-      }
-      ySize = (Ymax - Ymin);
-      if (ySize < 0) {
-        ySize = -ySize;
-      }
-      return ySize;
-    }
-
-    public void clearPolygon() {
-      pointCount = 0;
-      vertexCount = 0;
-      xcoords[pointCount] = 0;
-      ycoords[pointCount] = 0;
-    }
-
-  }
 
   //
   // We don't have to do a lot in the public constructor, only initialize a
@@ -434,7 +295,6 @@ class Plotter {
       return false;
     }
 
-    //      PrintWriter PCBelementFile = new PrintWriter(outputFile);
     //        firstCoordsRead = false; // to allow centring to work
     //        xOffset = 0.0;
     //        yOffset = 0.0;
@@ -470,8 +330,6 @@ class Plotter {
       return false;
     }
 
-    //      PrintWriter PCBelementFile = new PrintWriter(outputFile);
-
     //        if (!imageCentred) {
     firstCoordsRead = false; // to allow centring to work
     xOffset = 0.0;
@@ -480,9 +338,6 @@ class Plotter {
     initStateMachine();
     parseInput(in, 0);
     processInput(999999999);
-
-    //PCBelementFile.println(PCBelements);
-    //PCBelementFile.close();
 
     // we now sort out the necessary offsets to centre at 0,0
 
@@ -507,52 +362,52 @@ class Plotter {
   // the use in the second run to scale the plot to match the display
   // as good as possible.
   //
-  public boolean generatePCBFile(String in, String filename) throws IOException {
+  public String[] generatePCBFile(String in, String filename) throws IOException {
 
+    String[] convertedFiles = new String[1];
+    convertedFiles[0] = "Error";
     if ((in == null) || in.equals("")) {
       System.out.println("Error: Input is null or empty.");
-      return false;
+      return convertedFiles;
     }
 
     firstCoordsRead = false; // to allow centring to work
     //        xOffset = 0.0;
     //yOffset = 0.0;
-    PCBelements = "";
     // done to avoid doubling up data with successive
     // conversions of the same or different gerber files
 
     try {
 
-      File footprintFile = new File(filename + ".fp");
-      PrintWriter PCBelementFile = new PrintWriter(footprintFile);
-
       //          getDim = true; // actually, we don't care with footprints
       // if the gerber is not well centred
+      footprint.setFootprintName(filename);
       getDim = false;
       initStateMachine();
       parseInput(in, 0);
+      // System.out.println("About to process input.");
       processInput(999999999);
 
-      PCBelements = "Element[\"\" \"" 
-          + "convertedGerber"
-          + "\" \"\" \"\" 0 0 0 -3000 0 100 \"\"]\n(\n"
-          + PCBelements
-          + ")";
-      PCBelementFile.println(PCBelements);
-      PCBelementFile.close();
-
+      // System.out.println("About to write file.");
+      footprints.add(footprint);
+      boolean HTMLsummary = false;
+      boolean verbose = false;
+      convertedFiles = Footprint.exportFootprints(filename,
+                                                  footprints,
+                                                  "pcb-rnd",
+                                                  1.0f, "Converted/",
+                                                  HTMLsummary,
+                                                  verbose);      
     }
     catch  (Exception e) {
       System.out.println("Error: Couldn't write footprint file.");
-      return false;
-    }        
-
-    PCBelements = ""; // clear it out in case we convert more.
+    }
 
     //        getDim = false;
     // initStateMachine();
     //parseInput(in, 0);
-    return true; // processInput(999999999);
+    // processInput(999999999);
+    return convertedFiles;
   }
 
 
@@ -640,7 +495,7 @@ class Plotter {
 
     // EH addition
     if (DEBUG && generatePCBelements) {
-      System.out.println("Debug: Using " + outputFileName
+      System.out.println("Debug: Using " + footprint.footprintName
                          + " for layout primitives");
     }
     // EH addition end
@@ -1418,22 +1273,24 @@ class Plotter {
             bg.fillPolygon(points); // try this
           }
                     
-          if (generatePCBelements && (points.npoints == 5)) {
-            // int [] is problem in a Polygon
-            // may need a new class with additional
-            // float points or longs for real coords
-            // and method to provide polygon to to AWT
+          if (generatePCBelements && longPoints.likelyPad()) {
+            // int [] is problem in a Polygon, requiring 
+            // LongPolygon class for physical coords
                       
-            System.out.println("Polygonal RECT pads: " +
-                               rectangularPolygonPadCount);
+            //System.out.println("Polygonal RECT pads: " +
+            //                 rectangularPolygonPadCount++);
 
             if (!mirroredYaxis) {
-              PCBelements = PCBelements + generatePadNm(longPoints.centroidX(),longPoints.centroidY(),metric,RECTANGLE,longPoints.xSize(),longPoints.ySize()); // need to sort out bounds
+              generatePadNm(longPoints.centroidX(),longPoints.centroidY(),metric,RECTANGLE,longPoints.xSize(),longPoints.ySize()); // need to sort out bounds
             } else if (mirroredYaxis) {
-              PCBelements = PCBelements + generatePadNm(-longPoints.centroidX(),longPoints.centroidY(),metric,RECTANGLE,longPoints.xSize(),longPoints.ySize()); 
+              generatePadNm(-longPoints.centroidX(),longPoints.centroidY(),metric,RECTANGLE,longPoints.xSize(),longPoints.ySize()); 
               // need to sort out bounds
               // generatePad(-nx,ny,metric,RECTANGLE,genericPadX,genericPadY); // need to sort out bounds
             }
+          } else if (generatePCBelements && (points.npoints >= 4)) {
+            generatePolyPourNm(longPoints);
+            //System.out.println("Polygonal pour, npoints = "
+            //                   + points.npoints);  
           }
 
           points = new Polygon();
@@ -1789,10 +1646,17 @@ class Plotter {
       // in a circle, the number of points is simply width*pi. From that
       // we can deduct the arc step width.
       double step = 360.0/Math.PI/width;
- 
-      for (;arc > 0; arc -=step) {
-        flashAperture(d, cx+radius*Math.cos((start+arc)*Math.PI/180),
-                      cy+radius*Math.sin((start+arc)*Math.PI/180));
+
+      if (!headless) {
+        for (;arc > 0; arc -=step) {
+          flashAperture(d, cx+radius*Math.cos((start+arc)*Math.PI/180),
+                        cy+radius*Math.sin((start+arc)*Math.PI/180));
+        }
+      }
+      if(generatePCBelements && !mirroredYaxis) {
+        generateArc(cx, cy, metric, start, arc, radius, ad[d][1]);
+      } else if(generatePCBelements && mirroredYaxis) {
+        generateArc(-cx, cy, metric, start, arc, radius, ad[d][1]);
       }
     }
   }
@@ -1832,9 +1696,9 @@ class Plotter {
       // pcb element output
       // we can use the existing metric flag
       if(generatePCBelements && !mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][1]);
+        generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][1]);
       } else if(generatePCBelements && mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][1]);
+        generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][1]);
       }
 
       // end pcb element output
@@ -1856,9 +1720,9 @@ class Plotter {
       // pcb element output
       // we can use the existing metric flag
       if(generatePCBelements && !mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
+        generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
       } else if(generatePCBelements && mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
+        generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
       }
 
       // end pcb element output
@@ -1885,9 +1749,9 @@ class Plotter {
       // pcb element output
       // we can use the existing metric flag
       if(generatePCBelements && !mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
+        generatePad(x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
       } else if(generatePCBelements && mirroredYaxis) {
-        PCBelements = PCBelements + generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
+        generatePad(-x,y,metric,ad[d][0],ad[d][1],ad[d][2]);
         // end pcb element output
       }
       return;
@@ -1918,12 +1782,12 @@ class Plotter {
       // here. we try to identify square pads or pins & fail 
       if (generatePCBelements && !mirroredYaxis) { // && (max <= 9) && (convertToNanometres(radius, metric) < 4000000)) {
         // i.e square pad < 8mm "round" at vertex
-        PCBelements = PCBelements + generatePad(x,y,metric,RECTANGLE,(ad[d][1]/1.414214),(ad[d][1]/1.414214));
+        generatePad(x,y,metric,RECTANGLE,(ad[d][1]/1.414214),(ad[d][1]/1.414214));
         System.out.println("Vertices: " + ad[d][2] +
                            "Radius: " + ad[d][1] +
                            "Rotation: " + ad[d][3]);
       } else if (generatePCBelements && mirroredYaxis) { 
-        PCBelements = PCBelements + generatePad(-x,y,metric,RECTANGLE,(ad[d][1]/1.414214),(ad[d][1]/1.414214));
+        generatePad(-x,y,metric,RECTANGLE,(ad[d][1]/1.414214),(ad[d][1]/1.414214));
       }
       if (!headless) {
         g.fillPolygon(p);
@@ -1958,10 +1822,8 @@ class Plotter {
     // pcb element output
     // we can use the existing metric flag
     if(generatePCBelements && !mirroredYaxis) {
-      PCBelements = PCBelements +
           generateLine(x, y, metric, ad[d][1], ad[d][0], nx, ny);
     } else if(generatePCBelements && mirroredYaxis) {
-      PCBelements = PCBelements +
           generateLine(-x, y, metric, ad[d][1], ad[d][0], -nx, ny);
     }
 
@@ -1987,85 +1849,41 @@ class Plotter {
     }
   }
 
+  //some functions added to enable translate2coralEDA element output
 
-  //some functions added to enable PCB layout element output
-
-
-
-  private String generatePad(double x, double y, boolean metric, double shape, double adx, double ady) {
+  private void generatePad(double x, double y, boolean metric, double shape, double adx, double ady) {
     if (ady == 0) {
       ady = adx;
     }
     if (adx == 0) {
       adx = ady;
     }
-
-    String output = "Pad[";
+    
     long xNm = convertToNanometres(x, metric);
     // y axis is in other direction on gerbers
     long yNm = -convertToNanometres(y, metric);
     long xsizeNm = convertToNanometres(adx, metric);
     long ysizeNm = convertToNanometres(ady, metric);
-    long xOffsetNm = 0;
-    long yOffsetNm = 0;
 
-    String gEDAflag = "";
+    char kicadShape = 'O';
     if (shape == RECTANGLE) {
-      gEDAflag = "square";
+      kicadShape = 'R';
     }
-
-    long gEDAdefaultMetalClearance = 10; // in mils
-    long gEDAdefaultSolderMaskRelief = 10; // in mils
-
-    //    String shapeNetName = "1";
-    //    String shapePadName = "1";
-
-    int shapeNetName = pos;
-    int shapePadName = pos;
-
-    // scenario with wider SMD pad than tall, which determines
-    // which dimension is used for thickness
-    // i.e. shapeYsize is equivalent to gEDA's "thickness"
-    // attribute for a pad
-    if (xsizeNm >= ysizeNm) {
-      output = "Pad[" +
-          ((xOffsetNm + xNm - xsizeNm/2 + ysizeNm/2)/254) + " " +
-          ((yOffsetNm + yNm)/254) + " " +
-          ((xOffsetNm + xNm + xsizeNm/2 - ysizeNm/2)/254) + " " +
-          ((yOffsetNm + yNm)/254) + " " +
-          (ysizeNm/254) + " " +
-          (100*gEDAdefaultMetalClearance) + " " +
-          (100*gEDAdefaultSolderMaskRelief + (ysizeNm/254)) + " " +
-          '"' + shapeNetName + "\" " +
-          '"' + shapePadName + "\" " +
-          '"' +
-          gEDAflag +   // square vs rounded ends of SMD pad, or onsolder
-          '"' + "]\n";
-    }
-
-    // scenario with taller SMD pad than wide,
-    // which determines which dimension is used for thickness
-    // i.e. shapeXsize is equivalent to gEDA's
-    // "thickness" attribute for a pad
-    else {
-      output = "Pad[" +
-          ((xOffsetNm + xNm)/254) + " " +
-          ((yOffsetNm + yNm - ysizeNm/2 + xsizeNm/2)/254) + " " +
-          ((xOffsetNm + xNm)/254) + " " +
-          ((yOffsetNm + yNm + ysizeNm/2 - xsizeNm/2)/254) + " " +
-          (xsizeNm/254) + " " +
-          (100*gEDAdefaultMetalClearance) + " " +
-          (100*gEDAdefaultSolderMaskRelief + (xsizeNm/254)) + " " +
-          '"' + shapeNetName + "\" " +
-          '"' + shapePadName + "\" " +
-          '"' +
-          gEDAflag + // sets rounded or square pad
-          '"' + "]\n";
-    }    
-    return output;
+    Pad p = new Pad();
+    // this will become a lihata padstack by default 
+    p.populateGerberElement(xsizeNm, ysizeNm, xNm, yNm, kicadShape, "SMD", pos);
+    footprint.add(p);
   }
 
-  private String generatePadNm(long x, long y, boolean metric, double shape, long adx, long ady) {
+  private void generatePolyPourNm(LongPolygon longPoints) {
+    PolyPour pp = new PolyPour();
+    pp.populateGerberElement(longPoints.xcoords(),
+                             longPoints.ycoords(),
+                             pos);
+    footprint.add(pp);
+  }
+  
+  private void generatePadNm(long x, long y, boolean metric, double shape, long adx, long ady) {
     // we pass this the centroid of the polygon for x,y
     // and pass it the xSizeNM and xSizeNM of the polygon as adx, ady
     if (ady == 0) {
@@ -2074,119 +1892,209 @@ class Plotter {
     if (adx == 0) {
       adx = ady;
     }
-
-    System.out.println("Polygonal RECT pad: xNm: " + x + ", yNm: " + y + " , adx: " + adx + ", ady: " + ady);
-
-    String output = "Pad[";
-    long xNm = x;
-    // y axis is in other direction on gerbers
-    long yNm = -y;
-    long xsizeNm = adx;
-    long ysizeNm = ady;
-    long xOffsetNm = 0;
-    long yOffsetNm = 0;
-
-    String gEDAflag = "";
-    if (shape == RECTANGLE) {
-      gEDAflag = "square";
-    }
-
-    long gEDAdefaultMetalClearance = 10; // in mils
-    long gEDAdefaultSolderMaskRelief = 10; // in mils
-
-    //    String shapeNetName = "1";
-    //    String shapePadName = "1";
-
-    int shapeNetName = pos;
-    int shapePadName = pos;
-
-    // scenario with wider SMD pad than tall, which determines
-    // which dimension is used for thickness
-    // i.e. shapeYsize is equivalent to gEDA's "thickness"
-    // attribute for a pad
-    if (xsizeNm >= ysizeNm) {
-      output = "Pad[" +
-          ((xOffsetNm + xNm - xsizeNm/2 + ysizeNm/2)/254) + " " +
-          ((yOffsetNm + yNm)/254) + " " +
-          ((xOffsetNm + xNm + xsizeNm/2 - ysizeNm/2)/254) + " " +
-          ((yOffsetNm + yNm)/254) + " " +
-          (ysizeNm/254) + " " +
-          (100*gEDAdefaultMetalClearance) + " " +
-          (100*gEDAdefaultSolderMaskRelief + (ysizeNm/254)) + " " +
-          '"' + shapeNetName + "\" " +
-          '"' + shapePadName + "\" " +
-          '"' +
-          gEDAflag +   // square vs rounded ends of SMD pad, or onsolder
-          '"' + "]\n";
-    }
-
-    // scenario with taller SMD pad than wide,
-    // which determines which dimension is used for thickness
-    // i.e. shapeXsize is equivalent to gEDA's
-    // "thickness" attribute for a pad
-    else {
-      output = "Pad[" +
-          ((xOffsetNm + xNm)/254) + " " +
-          ((yOffsetNm + yNm - ysizeNm/2 + xsizeNm/2)/254) + " " +
-          ((xOffsetNm + xNm)/254) + " " +
-          ((yOffsetNm + yNm + ysizeNm/2 - xsizeNm/2)/254) + " " +
-          (xsizeNm/254) + " " +
-          (100*gEDAdefaultMetalClearance) + " " +
-          (100*gEDAdefaultSolderMaskRelief + (xsizeNm/254)) + " " +
-          '"' + shapeNetName + "\" " +
-          '"' + shapePadName + "\" " +
-          '"' +
-          gEDAflag + // sets rounded or square pad
-          '"' + "]\n";
-    }    
-    return output;
+    // this will become a lihata padstack by default 
+    Pad p = new Pad();
+    p.populateGerberElement(adx, ady, x, -y, 'R', "SMD", pos);
+    footprint.add(p);
   }
 
-
-
-  private String generateLine(double x, double y, boolean metric, double thickness, double shape, double nx, double ny) {
-
-    String output = "Pad[";
+  private void generateLine(double x, double y, boolean metric, double thickness, double shape, double nx, double ny) {
+      
     long xNm = convertToNanometres(x, metric);
     // y axis is in other direction on gerbers
     long yNm = -convertToNanometres(y, metric);
     long xnNm = convertToNanometres(nx, metric);
     long ynNm = -convertToNanometres(ny, metric);
-    long xOffsetNm = 0;
-    long yOffsetNm = 0;
     long thicknessNm = convertToNanometres(thickness, metric);
 
-    String gEDAflag = "";
-    if (shape == RECTANGLE) {
-      gEDAflag = "square";
-    }
-
-    long gEDAdefaultMetalClearance = 10; // in mils
-    long gEDAdefaultSolderMaskRelief = 10; // in mils
-
-    //    String shapeNetName = "2";
-    //    String shapePadName = "2"; // vs "1" for pads
-
-    int shapeNetName = pos;
-    int shapePadName = pos;
-
-    output = "Pad[" +
-        ((xOffsetNm + xNm)/254) + " " +
-        ((yOffsetNm + yNm)/254) + " " +
-        ((xOffsetNm + xnNm)/254) + " " +
-        ((yOffsetNm + ynNm)/254) + " " +
-        (thicknessNm/254) + " " +
-        (100*gEDAdefaultMetalClearance) + " " +
-        (100*gEDAdefaultSolderMaskRelief + (thicknessNm/254)) + " " +
-        '"' + shapeNetName + "\" " +
-        '"' + shapePadName + "\" " +
-        '"' +
-        gEDAflag +   // square vs rounded ends of SMD pad, or onsolder
-        '"' + "]\n";
-    return output;
+    DrawnElement de = new DrawnElement();
+    // this will end up on top copper layer by default 
+    de.populateGerberElement(xNm, yNm, xnNm, ynNm, thicknessNm, pos);
+    footprint.add(de);
+    //System.out.println("line pad done: " + pos);
   }
 
+  private void generateArc(double cx, double cy, boolean metric, double start, double arc, double radius, double thickness) {
+      
+    long cxNm = convertToNanometres(cx, metric);
+    // y axis is in other direction on gerbers
+    long cyNm = -convertToNanometres(cy, metric);
+    long thicknessNm = convertToNanometres(thickness, metric);
+    long radiusNm = convertToNanometres(radius, metric);
 
+    double deltaCorrected = arc;
+    double startCorrected = start + 180;
+    if (deltaCorrected < 0){
+      deltaCorrected += 360;
+    }
+    if (startCorrected >= 360) {
+      startCorrected -= 360;
+    }
+    Arc a = new Arc();
+    // this will end up on top copper layer by default 
+    a.populateGerberElement(cxNm, cyNm, thicknessNm, radiusNm,
+                            startCorrected, deltaCorrected, pos);
+    footprint.add(a);
+    //System.out.println("arc done: " + pos);
+  }
+
+  private class LongPolygon {
+
+    int vertexCount = 0;
+    int pointCount = 0;
+
+    ArrayList<Long> xcoords = new ArrayList<Long>();
+    ArrayList<Long> ycoords = new ArrayList<Long>();
+    long yPosition = 0;
+    long xPosition = 0;
+
+    public LongPolygon() {
+      clearPolygon();
+      xPosition = 0;
+      yPosition = 0;
+    }
+
+    public LongPolygon(long x, long y) { // x,y are position of polygon
+      clearPolygon();
+      xPosition = x;
+      yPosition = y;
+    }
+
+    public ArrayList<Long> xcoords() {
+      return xcoords;
+    }
+
+    public ArrayList<Long> ycoords() {
+      return ycoords;
+    }
+    
+    public Polygon polygon() {
+      Polygon traditionalPolygon = new Polygon();
+      return traditionalPolygon;
+    }
+
+    public int npoints() {
+      return pointCount;
+    }
+
+    public void addPoint(long x, long y) {
+      xcoords.add(x);
+      ycoords.add(y);
+      vertexCount = xcoords.size();
+      if (DEBUG) {
+        System.out.println("Added longPoly points: x : " + x + ", y: " + y);
+      }
+      pointCount++;
+    }
+
+    public int vertexCount() {
+      return vertexCount;
+    }
+
+    public long centroidX() {
+      long Xcentroid = 0;
+      if (xcoords.size() == 0) {
+        return 0;
+      }
+      long Xmax = xcoords.get(0);
+      long Xmin = xcoords.get(0);
+      for (int i = 1; i < xcoords.size(); i ++) {
+        if (Xmax < xcoords.get(i)) {
+          Xmax = xcoords.get(i);
+        }
+        if (Xmin > xcoords.get(i)) {
+          Xmin = xcoords.get(i);
+        }
+      }
+      Xcentroid = (Xmax - Xmin)/2 + Xmin;
+      return Xcentroid;
+    }
+
+    public long centroidY() {
+      if (ycoords.size() == 0) {
+        return 0;
+      }
+      long Ycentroid = 0;
+      long Ymax = ycoords.get(0);
+      long Ymin = ycoords.get(0);
+      for (int i = 1; i < ycoords.size(); i ++) {
+        if (Ymax < ycoords.get(i)) {
+          Ymax = ycoords.get(i);
+        }
+        if (Ymin > ycoords.get(i)) {
+          Ymin = ycoords.get(i);
+        }
+      }
+      Ycentroid = (Ymax - Ymin)/2 + Ymin;
+      return Ycentroid;      
+    }
+
+    public long xSize(){
+      long xSize = 0;
+      if (xcoords.size() == 0) {
+        return 0;
+      }
+      long Xmax = xcoords.get(0);
+      long Xmin = xcoords.get(0);
+      for (int i = 1; i < xcoords.size(); i ++) {
+        if (Xmax < xcoords.get(i)) {
+          Xmax = xcoords.get(i);
+        }
+        if (Xmin > xcoords.get(i)) {
+          Xmin = xcoords.get(i);
+        }
+      }
+      xSize = (Xmax - Xmin);
+      if (xSize < 0) {
+        xSize = -xSize;
+      }
+      return xSize;
+    }
+
+    public long ySize() {
+      long ySize = 0;
+      if (ycoords.size() == 0) {
+        return 0;
+      }
+      long Ymax = ycoords.get(0);
+      long Ymin = ycoords.get(0);
+      for (int i = 1; i < ycoords.size(); i ++) {
+        if (Ymax < ycoords.get(i)) {
+          Ymax = ycoords.get(i);
+        }
+        if (Ymin > ycoords.get(i)) {
+          Ymin = ycoords.get(i);
+        }
+      }
+      ySize = (Ymax - Ymin);
+      if (ySize < 0) {
+        ySize = -ySize;
+      }
+      return ySize;
+    }
+
+    public boolean likelyPad() {
+      long padSizeThreshold = 6000000; // = 6mm
+      // We test: "is it a small-ish rectangular or octagonal poly" ?
+      // scope for further heuristics based on
+      //  - excellon file data
+      //  - aspect ratios to distinguish QFN pads etc from lines
+      if (ySize() < padSizeThreshold && xSize() < padSizeThreshold) {
+        return ((pointCount == 5) || (pointCount == 9));
+      }
+      return false;
+    }
+
+    public void clearPolygon() {
+      pointCount = 0;
+      vertexCount = 0;
+      xcoords.clear();
+      ycoords.clear();
+    }
+
+  }
+
+  
   private long convertToNanometres(double rawValue, boolean metric)
   {
     if (metric) {
