@@ -198,7 +198,8 @@ public class Arc extends FootprintElementArchetype
     // the wire has negative or positive curve
     // this should also work in seven dimensional space, but YMMV
     double vectorCrossProduct = dxStart*dy - dx*dyStart;
-    if (vectorCrossProduct < 0) {
+    // corner case with Eagle Arc Angle > -180 needs to be tested for
+    if (vectorCrossProduct < 0 || gEDAdeltaAngle > 180)  {
       xCoordNm = (long)(midX + dxStart);
       yCoordNm = (long)(midY + dyStart); 
     } else {
@@ -451,7 +452,12 @@ public class Arc extends FootprintElementArchetype
 
   // we use this for polygon outlines in Eagle, which can employ arcs
   public long [] asSegments() {
-    int nSections = 9;
+    return asSegments(15); // a reasonable default 
+  }
+  
+  // we use this for polygon outlines in Eagle, which can employ arcs
+  public long [] asSegments(int segments) {
+    int nSections = segments;
     long [] xpoints = new long[nSections + 1];
     long [] ypoints = new long[nSections + 1];
     long [] points = new long[2*nSections + 2];

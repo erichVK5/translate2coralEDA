@@ -82,7 +82,6 @@ class EagleParser extends CADParser {
     ArrayList<String> symbolDefs = new ArrayList<String>();
     ArrayList<String> deviceSetDefs = new ArrayList<String>();
 
-    //List<String> currentPackage = new ArrayList<String>(); //not used
 
     long xOffset = 0;
     long yOffset = 0; // used to justify symbol
@@ -198,24 +197,16 @@ class EagleParser extends CADParser {
             Pad newPad = new Pad();
             newPad.populateEagleElement(currentLine);
             footprint.add(newPad);
-            //            newElement = newElement
-            //    + newPad.generateGEDAelement(xOffset,yOffset,1.0f);
           } else if (currentLine.startsWith("<wire") &&
                      layers.isDrawnTopSilk(currentLine)) {
             if (!currentLine.contains("curve=")) {
               DrawnElement silkLine = new DrawnElement();
               silkLine.populateEagleElement(currentLine);
               footprint.add(silkLine);
-              //              newElement = newElement
-              //    + silkLine.generateGEDAelement(xOffset,yOffset,1.0f);
             } else {
               Arc silkArc = new Arc();
               silkArc.populateEagleElement(currentLine);
-              footprint.add(silkArc);
-              //System.out.println("Arc element found");
-              //              newElement = newElement
-              //    + silkArc.generateGEDAelement(xOffset,yOffset,1.0f);
-              
+              footprint.add(silkArc);              
             }
           } else if (currentLine.startsWith("<rectangle") &&
                      layers.isDrawnTopSilk(currentLine)) {
@@ -223,17 +214,12 @@ class EagleParser extends CADParser {
                 = DrawnElement.eagleRectangleAsLines(currentLine);
             for (DrawnElement side : silkLines) {
               footprint.add(side);
-              //newElement = newElement
-              //    + side.generateGEDAelement(xOffset,yOffset,1.0f);
             }
           } else if (currentLine.startsWith("<circle") &&
                      layers.isDrawnTopSilk(currentLine)) {
             Circle silkCircle = new Circle();
             silkCircle.populateEagleElement(currentLine);
-            footprint.add(silkCircle);
-            //System.out.println("Arc element found");
-            //newElement = newElement
-            //    + silkCircle.generateGEDAelement(xOffset,yOffset,1.0f);
+            footprint.add(silkCircle);;
           } else if (currentLine.startsWith("<polygon") &&
                      (layers.isTopCopper(currentLine) ||
                       layers.isBottomCopper(currentLine) ||
@@ -246,29 +232,12 @@ class EagleParser extends CADParser {
             }
             PolyPour polyPour = new PolyPour();
             polyPour.populateEagleElement(polyDef);
-            if (polyDef.contains("curve=")) {
-              System.out.println("Unsupported curved polygonal outline in: " + FPName); 
-            }
             footprint.add(polyPour);
           }
-
           
         } // end if for "<package name"
 
         footprints.add(footprint);
-        // we now build the geda PCB footprint
-        /*        elData = "Element[\"\" \""
-         *    + FPName
-         *   + "\" \"\" \"\" 0 0 0 25000 0 100 \"\"]\n(\n"
-         *   + newElement
-         *   + ")";
-         *elName = FPName + ".fp";
-         *  
-         * // we now write the element to a file
-       * elementWrite(elName, elData);
-      *  // add the FP to our list of converted elements
-     *   convertedFiles.add(elName); 
-      *   newElement = ""; // reset the variable for batch conversion */
       } // end of this particular package while loop
     } // end of packagesBundle while loop
 

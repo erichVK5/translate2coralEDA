@@ -132,7 +132,7 @@ public class PolyPour extends FootprintElementArchetype
             "x2=" + x/1000000.0 + " " +
             "y2=" + (-y/1000000.0) + " " +
             "curve=" + previousDegrees + " " +
-            "width=1.0";
+            "width=1.0"; // ignore actual value for now
         //System.out.println("Eagle arc descriptor: " + eagleCmd);
         a.populateEagleElement(eagleCmd);
         long [] points = a.asSegments();
@@ -154,6 +154,7 @@ public class PolyPour extends FootprintElementArchetype
       }
       coordCount = 0;
     }
+    // we have run out of polygon defs now
     if (previousArc) {   // this catches a trailing curve=... in a final
       Arc a = new Arc(); // vertex definition
       String eagleCmd = "x1=" + xOld/1000000.0 + " " +
