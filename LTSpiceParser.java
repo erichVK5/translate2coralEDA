@@ -37,16 +37,12 @@ class LTSpiceParser extends CADParser {
 
   private static boolean verbose = false;
 
-  private static String format;
-
-  public LTSpiceParser(String filename, String format, boolean verbose) {
+  public LTSpiceParser(String filename, boolean verbose) {
     File LTSpiceFile = new File(filename);
     if (!LTSpiceFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format); // we won't be using pin spacing or format for now
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
     this.verbose = verbose;
   }

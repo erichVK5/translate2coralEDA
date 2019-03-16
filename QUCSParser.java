@@ -34,16 +34,12 @@ import java.util.Scanner;
 
 class QUCSParser extends CADParser {
 
-  private static String format;
-
-  public QUCSParser(String filename, String format, boolean verbose) {
+  public QUCSParser(String filename, boolean verbose) {
     File QUCSFile = new File(filename);
     if (!QUCSFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format); // we won't be using pin spacing or format for now
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
   }
 

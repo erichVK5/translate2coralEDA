@@ -34,18 +34,15 @@ import java.util.List;
 
 class KicadSymbolParser extends CADParser {
 
-  private static String format;
   private static boolean  verbose = true; 
   private static List<String> convertedFiles = new ArrayList<String>();
 
-  public KicadSymbolParser(String filename, String format, boolean verbose) {
+  public KicadSymbolParser(String filename, boolean verbose) {
     File KicadSymbolFile = new File(filename);
     if (!KicadSymbolFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format); // we won't be using pin spacing or format for now
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
     this.verbose = verbose;
   }
@@ -213,7 +210,7 @@ class KicadSymbolParser extends CADParser {
           }
 
         // we generate a string containing the GEDA element filename, ok for xschem too
-        String outputFileName = sym.generateSymbolFilename(format);
+        String outputFileName = sym.generateSymbolFilename(symFormat);
 
         // we then append a listing for this particular footprint
         // to the HTML summary
@@ -233,11 +230,11 @@ class KicadSymbolParser extends CADParser {
 
         // a String variable to contain the symbol data
 	sym.suppressTranslation(true); // adjusting translation to suit gschem (minX,minY) > (0,0) can break
-        String symbolData = symbolHeader(format) + sym.generateSymbol(gridSpacing, format);
+        String symbolData = symbolHeader(symFormat) + sym.generateSymbol(gridSpacing, symFormat);
 	if (verbose) {
           System.out.println("Just generated symbol.");
 	}
-	if (format.equals("gschem")) {
+	if (symFormat.equals("gschem")) {
           if (authorField != null) {
             symbolData = symbolData +
                 SymbolText.attributeString(-sym.xTranslate, -sym.yTranslate, ("author=" + authorField));

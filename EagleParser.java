@@ -41,19 +41,15 @@ class EagleParser extends CADParser {
 
   private static boolean verbose = false;
 
-  private static String format;
-
   static String exportPath = "Converted/";
   static float magnificationRatio = 1.0f;
 
-  public EagleParser(String filename, String format, boolean verbose) {
+  public EagleParser(String filename, boolean verbose) {
     File symDefFile = new File(filename);
     if (!symDefFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format);
+      System.out.println("Parsing: " + filename + " and exporting formats: " + fpFormat + ", " + symFormat);
     }
     this.verbose = verbose;
   }
@@ -326,11 +322,11 @@ class EagleParser extends CADParser {
             SymbolPolyline symbolLine = new SymbolPolyline();
             symbolLine.populateBXLElement(feature);
             newElement = newElement
-                + "\n" + symbolLine.toString(0,-yOffset, format);
+                + "\n" + symbolLine.toString(0,-yOffset, symFormat);
           } 
         }
 
-        String newSymbolHeader = symbolHeader(format)
+        String newSymbolHeader = symbolHeader(symFormat)
             + newElement; // we have created the header for the symbol
         newElement = "";
         String FPField = "";
@@ -366,10 +362,10 @@ class EagleParser extends CADParser {
             // with no pins, so we test before we build the symbol
             // note that we did not have a pin mapping we could apply
             // so pin numbers will default to zero
-            elData = pins.toString(-xOffset,-yOffset, format)
+            elData = pins.toString(-xOffset,-yOffset, symFormat)
                 //... header, and then
                 + "\n"
-                + pins.calculatedBoundingBox(0,0).toString(-xOffset,-yOffset, format);
+                + pins.calculatedBoundingBox(0,0).toString(-xOffset,-yOffset, symFormat);
           }
             
           // add some attribute fields
@@ -426,10 +422,10 @@ class EagleParser extends CADParser {
             elData = "";
             if (!pins.empty()) { // sometimes Eagle has rubbish symbols
               // with no pins, so we test before we build the symbol
-              elData = pins.toString(-xOffset,-yOffset,format)
+              elData = pins.toString(-xOffset,-yOffset,symFormat)
                   //... header, and then
                   + "\n"
-                  + pins.calculatedBoundingBox(0,0).toString(-xOffset,-yOffset, format);
+                  + pins.calculatedBoundingBox(0,0).toString(-xOffset,-yOffset, symFormat);
             }
             
             // add some attribute fields
@@ -453,8 +449,10 @@ class EagleParser extends CADParser {
     }
 
     List<String> footprintsExported
-        = Arrays.asList(Footprint.exportFootprints(LBRFile, footprints, format,
-                                                   magnificationRatio, exportPath,
+        = Arrays.asList(Footprint.exportFootprints(LBRFile, footprints,
+                                                   fpFormat,
+                                                   magnificationRatio,
+                                                   exportPath,
                                                    true, verbose));
     convertedFiles.addAll(footprintsExported);    
     return convertedFiles.toArray(new String[convertedFiles.size()]);

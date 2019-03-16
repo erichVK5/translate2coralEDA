@@ -11,16 +11,12 @@ class HersheyParser extends CADParser {
 
   private static boolean verbose = false;
 
-  private static String format;
-
-  public HersheyParser(String filename, String format, boolean verbose) {
+  public HersheyParser(String filename, boolean verbose) {
     File HersheyFile = new File(filename);
     if (!HersheyFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format); // we won't be using pin spacing or format for now
+      System.out.println("Parsing: " + filename + " and exporting format: " + fpFormat);
     }
     this.verbose = verbose;
   }

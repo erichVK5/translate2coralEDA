@@ -461,7 +461,7 @@ public class Arc extends FootprintElementArchetype
     long [] xpoints = new long[nSections + 1];
     long [] ypoints = new long[nSections + 1];
     long [] points = new long[2*nSections + 2];
-    double ddelta = Math.PI*(gEDAdeltaAngle/nSections)/180.0;
+    double ddelta = Math.PI*gEDAdeltaAngle/180.0/nSections;
     //System.out.println("start angle: " + gEDAdeltaAngle
     //                   + "ddelta angle: " + ddelta );
     for (int i = 0; i < nSections + 1; i++) {

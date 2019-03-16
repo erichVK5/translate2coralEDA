@@ -37,11 +37,36 @@ class CADParser {
 
   static String theFile = null;
   static Integer pinSpacing = 20;
+  static String symFormat = "xschem";
+  static String fpFormat = "pcb-rnd";
+
+  public static void setFormat(String format) {
+    setSymFormat(format);
+    setFPFormat(format);
+  }
+  
+  public static void setSymFormat(String format) {
+    if (format.equals("gschem") || format.equals("gEDA")) {
+      symFormat = "gschem";
+      pinSpacing = 200;
+    } else if (format.equals("xschem") || format.equals("coral")) {
+      symFormat = "xschem";
+      pinSpacing = 20; 
+    }
+  }
+  
+  public static void setFPFormat(String format) {
+    if (format.equals("PCB") || format.equals("gEDA")) {
+      fpFormat = "PCB";
+    } else if (format.equals("pcb-rnd") || format.equals("coral")) {
+      fpFormat = "pcb-rnd";
+    }
+  }
 
   public Integer setPinSpacing(String format) {
-    if (format.equals("gschem")) {
+    if (format.equals("gschem") || format.equals("gEDA")) {
       pinSpacing = 200; 
-    } else if (format.equals("xschem")) {
+    } else if (format.equals("xschem") || format.equals("coral")) {
       pinSpacing = 20; 
     }
     return pinSpacing;

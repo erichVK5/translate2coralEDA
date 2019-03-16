@@ -32,16 +32,12 @@ import java.util.Scanner;
 
 class symdefParser extends CADParser {
 
-  private static String format;
-
-  public symdefParser(String filename, String format, boolean verbose) {
+  public symdefParser(String filename, boolean verbose) {
     File symDefFile = new File(filename);
     if (!symDefFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format);
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
   }
 
@@ -114,22 +110,22 @@ class symdefParser extends CADParser {
     PinList pins = new PinList(0); // slots = 0
     for (String line : left) {
       SymbolPin newPin = new SymbolPin();
-      newPin.populateSymDefElement(line, "R", format);
+      newPin.populateSymDefElement(line, "R", symFormat);
       pins.addPin(newPin);
     }
     for (String line : bottom) {
       SymbolPin newPin = new SymbolPin();
-      newPin.populateSymDefElement(line, "U", format);
+      newPin.populateSymDefElement(line, "U", symFormat);
       pins.addPin(newPin);
     }
     for (String line : top) {
       SymbolPin newPin = new SymbolPin();
-      newPin.populateSymDefElement(line, "D", format);
+      newPin.populateSymDefElement(line, "D", symFormat);
       pins.addPin(newPin);
     }
     for (String line : right) {
       SymbolPin newPin = new SymbolPin();
-      newPin.populateSymDefElement(line, "L", format);
+      newPin.populateSymDefElement(line, "L", symFormat);
       pins.addPin(newPin);
     }
 
@@ -151,7 +147,7 @@ class symdefParser extends CADParser {
           + SymbolText.symDefAttributeString(textXOffset, 0, attr);
     }
 
-    newSymbol = symbolHeader(format); // don;t need newElement
+    newSymbol = symbolHeader(symFormat); // don;t need newElement
     //        + newElement; // we have created the header for the symbol
     //newElement = ""; //not used
     
@@ -160,11 +156,11 @@ class symdefParser extends CADParser {
     // we can now put the pieces of the symdef defined symbol together
     elName = "symDefSymbol.sym";
     elData = newSymbol   // we now add pins to the
-        + newPinList.toString(xOffset,-yOffset, format) // the header, and then
+        + newPinList.toString(xOffset,-yOffset, symFormat) // the header, and then
         + "\n"
-	+ newPinList.boundingBox(0,0).toString(xOffset,-yOffset, format);
+	+ newPinList.boundingBox(0,0).toString(xOffset,-yOffset, symFormat);
 
-    if (format.equals("gschem")) {
+    if (symFormat.equals("gschem")) {
       elData = elData + symAttributes; // the final attributes
     }
 

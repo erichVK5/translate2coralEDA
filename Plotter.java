@@ -362,7 +362,7 @@ class Plotter {
   // the use in the second run to scale the plot to match the display
   // as good as possible.
   //
-  public String[] generatePCBFile(String in, String filename) throws IOException {
+  public String[] generatePCBFile(String in, String filename, String format) throws IOException {
 
     String[] convertedFiles = new String[1];
     convertedFiles[0] = "Error";
@@ -394,7 +394,7 @@ class Plotter {
       boolean verbose = false;
       convertedFiles = Footprint.exportFootprints(filename,
                                                   footprints,
-                                                  "pcb-rnd",
+                                                  format,
                                                   1.0f, "Converted/",
                                                   HTMLsummary,
                                                   verbose);      

@@ -31,16 +31,12 @@ import java.util.Scanner;
 
 class IBISParser extends CADParser {
 
-  private static String format;
-
-  public IBISParser(String filename, String format, boolean verbose) {
+  public IBISParser(String filename, boolean verbose) {
     File symDefFile = new File(filename);
     if (!symDefFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format);
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
   }
 
@@ -83,7 +79,7 @@ class IBISParser extends CADParser {
               // we make sure it isn't a comment line, i.e. "|" prefix
               if (!currentLine.startsWith("|")) {
                 SymbolPin latestPin = new SymbolPin();
-                latestPin.populateIBISElement(currentLine, format);
+                latestPin.populateIBISElement(currentLine, symFormat);
                 pins.addPin(latestPin);
               }
               lastline = inputIBIS.nextLine();//makenextLine()nullsafe 
@@ -96,22 +92,21 @@ class IBISParser extends CADParser {
         }
       }
     }
-    String format = "xschem";
-    PinList newPinList = pins.createDILSymbol(format);
+    PinList newPinList = pins.createDILSymbol(symFormat);
 
     // we can now build the final gschem symbol
-    newSymbol = symbolHeader(format);
+    newSymbol = symbolHeader(symFormat);
     String FPAttr = "footprint=" + FPName;
     symAttributes = symAttributes
         + SymbolText.BXLAttributeString(newPinList.textRHS(),0, FPAttr);       
     String elData = newSymbol   // we now add pins to the header...
-        + newPinList.toString(xOffset,yOffset,format)
+        + newPinList.toString(xOffset,yOffset,symFormat)
         // remembering that we built this symbol with coords of
         // our own choosing, i.e. well defined y coords, so don't need
         // to worry about justifying it to display nicely in gschem
         // unlike BXL or similar symbol definitions
         + "\n"
-        + newPinList.calculatedBoundingBox(0,0).toString(0,0,format)
+        + newPinList.calculatedBoundingBox(0,0).toString(0,0,symFormat)
         + symAttributes;
     String elName = symName + ".sym";
 

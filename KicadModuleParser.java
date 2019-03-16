@@ -34,7 +34,6 @@ import java.util.List;
 public class KicadModuleParser extends CADParser
 {
 
-  static String format = "pcb-rnd";
   private static List<String> convertedFiles = new ArrayList<String>();
 
   static boolean insertElementPreliminaryComments = false;
@@ -64,13 +63,12 @@ public class KicadModuleParser extends CADParser
 
   // first, we parse the command line arguments passed to the utility when started
 
-  public KicadModuleParser(String filename, String format, boolean verbose) {
+  public KicadModuleParser(String filename, boolean verbose) {
     File KicadModuleFile = new File(filename);
     if (!KicadModuleFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
+      System.out.println("Parsing: " + filename + " and exporting format: " + fpFormat);
     }
     verboseMode = verbose;
   }
@@ -357,7 +355,7 @@ public class KicadModuleParser extends CADParser
                            "versus counted modules in library: " + modulesInLibraryCount);
       }
 
-    return Footprint.exportFootprints(kicadModuleFileName, footprintsInLibrary, format,
+    return Footprint.exportFootprints(kicadModuleFileName, footprintsInLibrary, fpFormat,
                                       magnificationRatio, convertedKicadModulePath, true, verboseMode);
   }
 

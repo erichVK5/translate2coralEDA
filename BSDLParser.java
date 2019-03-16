@@ -31,16 +31,12 @@ import java.util.Scanner;
 
 class BSDLParser extends CADParser {
 
-  private static String format;
-
-  public BSDLParser(String filename, String format, boolean verbose) {
+  public BSDLParser(String filename, boolean verbose) {
     File symDefFile = new File(filename);
     if (!symDefFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format);
+      System.out.println("Parsing: " + filename + " and exporting format: " + symFormat);
     }
   }
 
@@ -88,7 +84,7 @@ class BSDLParser extends CADParser {
               if ((currentLine.length() != 0) ) {
                 //                  && !currentLine.equals(" ") ) {
                 SymbolPin latestPin = new SymbolPin();
-                latestPin.populateBSDLElement(currentLine, format);
+                latestPin.populateBSDLElement(currentLine, symFormat);
                 pins.addPin(latestPin);
                 if (currentLine.endsWith(";")) {
                   lastLine = true;
@@ -112,7 +108,7 @@ class BSDLParser extends CADParser {
         
         pins.setBSDPinType(portPinDef.toArray(new String[portPinDef.size()]));
 
-        PinList newPinList = pins.createDILSymbol(format);
+        PinList newPinList = pins.createDILSymbol(symFormat);
         // with a pin list, we can now calculate text label positions
         long textRHSOffset = newPinList.textRHS();
         yOffset = newPinList.minY();// to justify the symbol in gschem 
@@ -126,10 +122,10 @@ class BSDLParser extends CADParser {
 
         // we now build the symbol
         elData = newSymbol   // we now add pins to the...
-            + newPinList.toString(xOffset,yOffset, format)
+            + newPinList.toString(xOffset,yOffset, symFormat)
             //... header, and then
             + "\n"
-            + newPinList.calculatedBoundingBox(0,0).toString(0,yOffset,format)
+            + newPinList.calculatedBoundingBox(0,0).toString(0,yOffset,symFormat)
             + symAttributes;
         elName = symName + ".sym";
 

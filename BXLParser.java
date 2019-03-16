@@ -38,19 +38,15 @@ class BXLParser extends CADParser {
 
   private static boolean verbose = false;
 
-  private static String format;
-
   static float magnificationRatio = 1.0f;
   static String exportPath = "Converted/";
   
-  public BXLParser(String filename, String format, boolean verbose) {
+  public BXLParser(String filename, boolean verbose) {
     File BXLFile = new File(filename);
     if (!BXLFile.exists()) {
       System.exit(0);
     } else {
-      this.format = format;
-      System.out.println("Parsing: " + filename + " and exporting format: " + format);
-      setPinSpacing(format);
+      System.out.println("Parsing: " + filename + " and exporting formats: " + fpFormat + ", " + symFormat);
     }
     this.verbose = verbose;
   }
@@ -164,7 +160,7 @@ class BXLParser extends CADParser {
             SymbolPolyline symbolLine = new SymbolPolyline();
             symbolLine.populateBXLElement(feature);
             newElement = newElement
-                + "\n" + symbolLine.toString(0,-yOffset,format);
+                + "\n" + symbolLine.toString(0,-yOffset,symFormat);
           } 
         }
 
@@ -173,7 +169,7 @@ class BXLParser extends CADParser {
               + SymbolText.BXLAttributeString(textXOffset, 0, attr);
         }
 
-        newSymbol = symbolHeader(format)
+        newSymbol = symbolHeader(symFormat)
             + newElement; // we have created the header for the symbol
         newElement = "";
         silkFeatures.clear();
@@ -219,7 +215,7 @@ class BXLParser extends CADParser {
         // we can now put the pieces of the BXL defined symbol together
         elName = symbolName + ".sym";
         elData = newSymbol   // we now add pins to the
-            + pins.toString(0,-yOffset, format) // the header, and then
+            + pins.toString(0,-yOffset, symFormat) // the header, and then
             + symAttributes; // the final attributes
 
         // we now write the element to a file
@@ -232,7 +228,7 @@ class BXLParser extends CADParser {
     }
 
     List<String> footprintsExported
-        = Arrays.asList(Footprint.exportFootprints(BXLFile, footprints, format,
+        = Arrays.asList(Footprint.exportFootprints(BXLFile, footprints, fpFormat,
                                                    magnificationRatio, exportPath,
                                                    true, verbose));
     convertedFiles.addAll(footprintsExported);    

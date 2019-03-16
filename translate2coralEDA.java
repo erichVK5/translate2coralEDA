@@ -39,8 +39,11 @@ public class translate2coralEDA {
 
     boolean textOutputOnly = false;
     boolean quietMode = false;
+    String defaultFormat = "coral";
     String filename = "";
     String [] convertedFiles = null;
+
+    CADParser.setFormat(defaultFormat);
 
     if (args.length == 0) {
       printHelp();
@@ -54,6 +57,8 @@ public class translate2coralEDA {
           quietMode = true;
         } else if (arg.equals("-v")){
           verbose = true;
+        } else if (arg.equals("-g")){
+          CADParser.setFormat("gEDA");
         }
       }
     }
@@ -187,7 +192,7 @@ public class translate2coralEDA {
   // but do not provide package/footprint information
   private static String [] parseBSDL(String BSDLFilename) throws IOException {
 
-    BSDLParser BSDLp = new BSDLParser(BSDLFilename, "xschem", verbose);
+    BSDLParser BSDLp = new BSDLParser(BSDLFilename, verbose);
     return BSDLp.convert(BSDLFilename);
 
   } 
@@ -206,7 +211,7 @@ public class translate2coralEDA {
   // generation as well as package/footprint information
   private static String [] parseBXL(String BXLFilename) throws IOException {
 
-    BXLParser BXLp = new BXLParser(BXLFilename, "xschem", verbose);
+    BXLParser BXLp = new BXLParser(BXLFilename, verbose);
     return BXLp.convert(BXLFilename);
 
   } 
@@ -215,7 +220,7 @@ public class translate2coralEDA {
   // schematic symbol data
   private static String [] parseEagleLBR(String EagleFilename) throws IOException {
 
-    EagleParser Eaglep = new EagleParser(EagleFilename, "pcb-rnd", verbose);
+    EagleParser Eaglep = new EagleParser(EagleFilename, verbose);
     return Eaglep.convert(EagleFilename);
 
   } 
@@ -241,7 +246,7 @@ public class translate2coralEDA {
     Plotter gerberPlotter = new Plotter();
     gerberPlotter.setScale(1.0, 1.0);
     gerberPlotter.setSize(800, 640); // might make it behave
-    return gerberPlotter.generatePCBFile(gerbText,gerberFile);
+    return gerberPlotter.generatePCBFile(gerbText,gerberFile,"pcb-rnd");
 
   }
 
@@ -249,7 +254,7 @@ public class translate2coralEDA {
   // sometimes found in the wild in .py files
   private static String [] parseHersheyData(String hersheyFilename) throws IOException {
   
-    HersheyParser Hersheyp = new HersheyParser(hersheyFilename, "xschem", verbose);
+    HersheyParser Hersheyp = new HersheyParser(hersheyFilename, verbose);
     return Hersheyp.convert(hersheyFilename);
 
   } 
@@ -258,7 +263,7 @@ public class translate2coralEDA {
   // but do not provide package/footprint information
   private static String [] parseIBIS(String IBISFilename) throws IOException {
 
-    IBISParser IBISp = new IBISParser(IBISFilename, "xschem", verbose);
+    IBISParser IBISp = new IBISParser(IBISFilename, verbose);
     return IBISp.convert(IBISFilename);
 
   } 
@@ -266,7 +271,7 @@ public class translate2coralEDA {
   // Kicad stores its symbols in library files, which exist in legacy format for now
   private static String [] parseKicadLib(String KicadLibFilename) throws IOException {
 
-    KicadSymbolParser KSp = new KicadSymbolParser(KicadLibFilename, "xschem", verbose);
+    KicadSymbolParser KSp = new KicadSymbolParser(KicadLibFilename, verbose);
     return KSp.convert(KicadLibFilename);
 
   } 
@@ -274,7 +279,7 @@ public class translate2coralEDA {
   // Kicad stores its modules (fp's) in module files, which exist in legacy and s-expr formats
   private static String [] parseKicadModule(String KicadModuleFilename) throws IOException {
 
-    KicadModuleParser KMp = new KicadModuleParser(KicadModuleFilename, "pcb-rnd", verbose);
+    KicadModuleParser KMp = new KicadModuleParser(KicadModuleFilename, verbose);
     return KMp.convert(KicadModuleFilename);
 
   } 
@@ -283,7 +288,7 @@ public class translate2coralEDA {
   // into a gschem schematic file
   private static String [] parseLTSpice(String LTSpiceFilename) throws IOException {
 
-    LTSpiceParser LTSpicep = new LTSpiceParser(LTSpiceFilename, "xschem", verbose);
+    LTSpiceParser LTSpicep = new LTSpiceParser(LTSpiceFilename, verbose);
     return LTSpicep.convert(LTSpiceFilename);
 
   } 
@@ -292,7 +297,7 @@ public class translate2coralEDA {
   // but do not provide package/footprint information
   private static String [] parseSymdef(String symDefFilename) throws IOException {
 
-    symdefParser sdp = new symdefParser(symDefFilename, "xschem", verbose);
+    symdefParser sdp = new symdefParser(symDefFilename, verbose);
     return symdefParser.convert(symDefFilename);
 
   } 
@@ -307,7 +312,7 @@ public class translate2coralEDA {
   // into a gschem schematic file
   private static String [] parseQUCS(String QUCSsch) throws IOException {
 
-    QUCSParser QUCSp = new QUCSParser(QUCSsch, "gschem", verbose);
+    QUCSParser QUCSp = new QUCSParser(QUCSsch, verbose);
     return QUCSParser.convert(QUCSsch);
 
   } 
