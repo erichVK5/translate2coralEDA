@@ -89,6 +89,13 @@ public class translate2coralEDA {
       } catch (Exception e) {
         defaultFileIOError(e);
       }
+    } else if (filename.endsWith(".hkp") ||
+               filename.endsWith(".HKP"))  {
+      try {
+        convertedFiles = parseHKP(filename);
+      } catch (Exception e) {
+        defaultFileIOError(e);
+      }
     } else if (filename.endsWith(".ibs") ||
                filename.endsWith(".IBS") ) {
       try {
@@ -258,6 +265,16 @@ public class translate2coralEDA {
     return Hersheyp.convert(hersheyFilename);
 
   } 
+
+  // HKP files provide symbols and footprints in veribest format
+  // from Orcad, but we only convert symbols for now, since pcb-rnd
+  // can import the footprints directly
+  private static String [] parseHKP(String HKPFilename) throws IOException {
+
+    hkpParser HLPp = new hkpParser(HKPFilename, verbose);
+    return HLPp.convert(HKPFilename);
+
+  }
 
   // IBIS files provide pin mapping suitable for symbol generation
   // but do not provide package/footprint information

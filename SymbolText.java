@@ -104,6 +104,17 @@ public class SymbolText extends SymbolElement
     }
     textSize = defaultTextSize;
   }
+
+  public void populateHKPElement(String HKPLine) {
+    HKPLine = HKPLine.replaceAll("[\"()]<>","");
+    String [] tokens = HKPLine.split(" ");
+    textField = tokens[14];
+    // System.out.println("Final extracted field: " + textField);
+    String [] coords = tokens[11].split(",");
+    xCoord = Integer.parseInt(coords[0]);
+    yCoord = Integer.parseInt(coords[1]);
+    textSize = defaultTextSize;
+  }
   
   public void constructor(String arg)
   {

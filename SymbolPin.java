@@ -357,8 +357,6 @@ public class SymbolPin extends SymbolElement
     // except for "nc" = not connected
   }
 
-
-
   public void populateBXLElement(String BXLLine) {
     pinDescriptor = BXLLine;
     BXLLine = BXLLine.replaceAll("[\"(),]","");
@@ -405,6 +403,30 @@ public class SymbolPin extends SymbolElement
 
   }
 
+  public void populateHKPElement(String HKPLine) {
+    pinDescriptor = HKPLine;
+    String HKPLineTrimmed = HKPLine.replaceAll("[<>]","");
+    String [] tokens = HKPLineTrimmed.split(" ");
+    int pinRotation = 0;
+
+    String [] coords = tokens[3].split(",");
+    xCoord1 = Integer.parseInt(coords[0]);
+    yCoord1 = Integer.parseInt(coords[1]);
+    pinLength = 0;
+    pinNumber = tokens[1];
+    pinDesc = tokens[1];
+    pinName = tokens[1];
+
+    pinDirection = "L";
+
+    super.updateXdimensions(xCoord1);
+    super.updateYdimensions(yCoord1);
+    organiseLabelAndPinCoords();
+
+    kicadUnit = 0; // assume only one slot
+    pinEType = "pas"; // default for now, may be able to fix
+
+  }
 
   public void constructor(String arg)
   {

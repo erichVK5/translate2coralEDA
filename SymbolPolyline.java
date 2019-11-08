@@ -79,6 +79,22 @@ public class SymbolPolyline extends SymbolElement
     vertices = 2;
   }
 
+  public void populateHKPElement(String HKPLine) {
+    output = ""; // blow away the default message
+    String HKPLineTrimmed = HKPLine.replaceAll("[<>]","");
+    String [] tokens = HKPLineTrimmed.split(" ");
+    String [] coords;
+    lineThickness = 12;
+    //lineThickness = Integer.parseInt(tokens[++index]);
+    for (int index = 5; index < tokens.length; index++) {
+	coords = tokens[index].split(",");
+        xCoords[vertices] = Integer.parseInt(coords[0]);
+        yCoords[vertices] = Integer.parseInt(coords[1]);
+        updateCoords(vertices);
+	vertices++;
+    }
+  }
+
   public void updateCoords(int vertex) {
     // we first update the superclass static variable
     super.updateXdimensions(xCoords[vertex]);
