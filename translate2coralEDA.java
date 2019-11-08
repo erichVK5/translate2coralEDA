@@ -272,6 +272,7 @@ public class translate2coralEDA {
   private static String [] parseHKP(String HKPFilename) throws IOException {
 
     hkpParser HLPp = new hkpParser(HKPFilename, verbose);
+    System.out.println("Recommend import of HKP / veribest footprints directly into pcb-rnd"); 
     return HLPp.convert(HKPFilename);
 
   }

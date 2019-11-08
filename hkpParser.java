@@ -95,7 +95,6 @@ class hkpParser extends CADParser {
           if (currentLine.startsWith("*PIN")) {
             //System.out.println("#Making new pin: " + currentLine);
             SymbolPin latestPin = new SymbolPin();
-	    System.out.println("NEW_PIN: " + currentLine);
             latestPin.populateHKPElement(currentLine);
             pins.addPin(latestPin);
           } else if (currentLine.startsWith("*GFX_LINE")) {
@@ -116,7 +115,6 @@ class hkpParser extends CADParser {
         for (String feature : silkFeatures) {
           if (feature.startsWith("*GFX_LINE")) {
             SymbolPolyline symbolLine = new SymbolPolyline();
-		System.out.println("GFX_LINE: " + feature);
             symbolLine.populateHKPElement(feature);
             newElement = newElement
                 + "\n" + symbolLine.toString(0,-yOffset,symFormat);
@@ -144,11 +142,13 @@ class hkpParser extends CADParser {
       }
     }
 
-    List<String> footprintsExported
-        = Arrays.asList(Footprint.exportFootprints(hkpFile, footprints, fpFormat,
-                                                   magnificationRatio, exportPath,
-                                                   true, verbose));
-    convertedFiles.addAll(footprintsExported);    
+//  May get used uf we decided to try and convert footprints in hkp files
+//  but pcb-rnd does a better job 
+//    List<String> footprintsExported
+//        = Arrays.asList(Footprint.exportFootprints(hkpFile, footprints, fpFormat,
+//                                                   magnificationRatio, exportPath,
+//                                                   true, verbose));
+//    convertedFiles.addAll(footprintsExported);    
     return convertedFiles.toArray(new String[convertedFiles.size()]);
   } 
 }
