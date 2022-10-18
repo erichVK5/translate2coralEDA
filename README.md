@@ -17,6 +17,7 @@ A utility allowing conversion from
 - Eagle XML (symbols, footprints)
 - Gerber files
 - Hershey Eggbot Fonts
+- Borland BGI bonary stroked font files
 - IBIS
 - kicad eeschema symbols
 - kicad pcbnew footprints (modules)
