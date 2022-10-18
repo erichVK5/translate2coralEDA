@@ -3,8 +3,8 @@
 //
 // based on translate2geda.java
 //
-// translate2coralEDA.java v1.0
-// Copyright (C) 2019 Erich S. Heinzle, a1039181@gmail.com
+// translate2coralEDA.java v1.1
+// Copyright (C) 2019,2022 Erich S. Heinzle, a1039181@gmail.com
 
 //    see LICENSE-gpl-v2.txt for software license
 //    see README.txt
@@ -23,7 +23,7 @@
 //    along with this program; if not, write to the Free Software
 //    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //    
-//    translate2coralEDA Copyright (C) 2019 Erich S. Heinzle a1039181@gmail.com
+//    translate2coralEDA Copyright (C) 2019,2022 Erich S. Heinzle a1039181@gmail.com
 
 
 import java.io.*;
@@ -178,6 +178,13 @@ public class translate2coralEDA {
       } catch (Exception e) {
         defaultFileIOError(e);
       }
+    } else if (filename.endsWith(".chr") ||
+               filename.endsWith(".CHR") ) {
+      try { // might be a BGI font def file
+        convertedFiles = parseBGIfont(filename);
+      } catch (Exception e) {
+        defaultFileIOError(e);
+      }
     } else {
       System.out.println("I didn't recognise a suitable file " +
                          "ending for conversion, i.e..\n" +
@@ -264,7 +271,17 @@ public class translate2coralEDA {
     HersheyParser Hersheyp = new HersheyParser(hersheyFilename, verbose);
     return Hersheyp.convert(hersheyFilename);
 
-  } 
+  }
+
+  // Borland Turbo Pascal BGI files provide stroked font information in a
+  // proprietary binary format to help you party like it's 1989,
+  // see https://moddingwiki.shikadi.net/wiki/BGI_Stroked_Font
+  private static String [] parseBGIfont(String BGIfilename) throws IOException {
+
+    BGIfontParser BGIp = new BGIfontParser(BGIfilename, verbose);
+    return BGIp.convert(BGIfilename);
+
+  }
 
   // HKP files provide symbols and footprints in veribest format
   // from Orcad, but we only convert symbols for now, since pcb-rnd
